@@ -1,0 +1,6 @@
+pandas>=2.0
+numpy>=1.24
+psycopg2-binary>=2.9
+# Pas de contrainte sur sqlalchemy ici : la version compatible avec Airflow
+# (1.4.x pour Airflow 2.9.3) est déjà fournie par l'image de base et fixée
+# par le fichier de contraintes officiel appliqué dans le Dockerfile.
