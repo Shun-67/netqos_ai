@@ -20,7 +20,7 @@ import sys
 import pandas as pd
 
 sys.path.append(".")
-from src.db import get_engine
+from src.db import get_engine, upsert_on_conflict
 
 KPIS = ["throughput", "latency", "jitter", "packet_loss", "cell_load"]
 
@@ -90,7 +90,7 @@ def build_features(since: str = None) -> pd.DataFrame:
     with engine.begin() as conn:
         features_df[ordered_cols].to_sql(
             "kpi_features", conn, if_exists="append", index=False,
-            method="multi", chunksize=2000
+            method=upsert_on_conflict, chunksize=2000
         )
     print(f"{len(features_df)} lignes de features écrites dans kpi_features "
           f"({len(feature_cols)} colonnes de features par ligne)")
