@@ -12,7 +12,7 @@ Généré par `python -m src.scripts.run_eda`. Figures dans `reports/figures/eda
 |---|---|
 | Lignes servies | 100,800 |
 | Cellules | 5 |
-| Période couverte | 2026-07-28 20:21:00+00:00 → 2026-08-11 20:20:00+00:00 |
+| Période couverte | 2026-08-02 15:48:00+00:00 → 2026-08-16 15:47:00+00:00 |
 | Durée | 14.0 jours |
 | Valeurs imputées (`is_missing`) | 0.0 % |
 | Valeurs nulles résiduelles | 0 |
@@ -33,11 +33,11 @@ la fiche.
 
 |             |   count |   mean |    std |   min |    5% |   25% |   50% |    75% |    95% |    99% |    max | unite   |   skew |
 |:------------|--------:|-------:|-------:|------:|------:|------:|------:|-------:|-------:|-------:|-------:|:--------|-------:|
-| throughput  |  100800 | 94.436 | 22.486 |  2.65 | 63.47 | 77.09 | 93.2  | 107.58 | 141.62 | 150.88 | 159.58 | Mbit/s  |  0.477 |
-| latency     |  100800 | 16.085 |  6.48  |  6.56 | 10.14 | 12.68 | 15.16 |  18.46 |  23.92 |  26.08 | 260.75 | ms      | 12.814 |
-| jitter      |  100800 |  4.459 |  1.2   |  1.86 |  3.03 |  3.74 |  4.35 |   5.14 |   5.87 |   6.27 |  30.83 | ms      |  6.068 |
-| packet_loss |  100800 |  0.711 |  2.186 |  0    |  0.24 |  0.46 |  0.63 |   0.79 |   1.03 |   1.23 |  79.84 | %       | 28.267 |
-| cell_load   |  100800 | 64.831 | 24.895 | 13.15 | 28.45 | 40.97 | 65.08 |  89.24 | 100    | 100    | 100    | %       | -0.04  |
+| throughput  |  100800 | 94.434 | 22.514 |  2.7  | 63.41 | 77.12 | 93.19 | 107.65 | 141.8  | 150.74 | 159.66 | Mbit/s  |  0.475 |
+| latency     |  100800 | 16.074 |  6.322 |  6.72 | 10.13 | 12.69 | 15.17 |  18.47 |  23.91 |  26.09 | 260.84 | ms      | 12.56  |
+| jitter      |  100800 |  4.461 |  1.228 |  1.8  |  3.04 |  3.73 |  4.35 |   5.13 |   5.87 |   6.29 |  29.11 | ms      |  6.624 |
+| packet_loss |  100800 |  0.711 |  2.183 |  0    |  0.24 |  0.47 |  0.63 |   0.79 |   1.03 |   1.22 |  79.64 | %       | 28.262 |
+| cell_load   |  100800 | 64.821 | 24.907 | 12.29 | 28.49 | 40.84 | 65.18 |  89.21 | 100    | 100    | 100    | %       | -0.044 |
 
 ---
 
@@ -48,11 +48,11 @@ du régime normal. Une séparabilité > 1 σ désigne un KPI directement discrim
 
 | kpi         | unite   |   moy_normal |   moy_anomalie |   ecart_relatif_pct |   separabilite_sigma |
 |:------------|:--------|-------------:|---------------:|--------------------:|---------------------:|
-| packet_loss | %       |        0.626 |          7.251 |             1058.3  |               28.192 |
-| latency     | ms      |       15.784 |         39.353 |              149.33 |                5.796 |
-| jitter      | ms      |        4.411 |          8.201 |               85.94 |                4.3   |
-| throughput  | Mbit/s  |       94.747 |         70.389 |              -25.71 |                1.108 |
-| cell_load   | %       |       64.766 |         69.86  |                7.87 |                0.205 |
+| packet_loss | %       |        0.626 |          7.234 |             1055.31 |               28.117 |
+| latency     | ms      |       15.786 |         38.309 |              142.68 |                5.53  |
+| jitter      | ms      |        4.412 |          8.276 |               87.61 |                4.385 |
+| throughput  | Mbit/s  |       94.738 |         70.933 |              -25.13 |                1.082 |
+| cell_load   | %       |       64.788 |         67.337 |                3.93 |                0.102 |
 
 Lecture : les KPI les plus discriminants doivent peser dans le détecteur ; ceux
 dont la séparabilité est faible n'apportent du signal qu'en interaction avec les
@@ -66,11 +66,11 @@ Amplitude du profil horaire, en % de la moyenne du KPI :
 
 |             |   amplitude_pct |
 |:------------|----------------:|
-| throughput  |            46   |
+| throughput  |            46.3 |
 | latency     |            40.3 |
-| jitter      |            48.1 |
-| packet_loss |            84.3 |
-| cell_load   |           104.1 |
+| jitter      |            50.8 |
+| packet_loss |            69.4 |
+| cell_load   |           103.9 |
 
 Une saisonnalité de cette ampleur impose deux choix :
 1. les features de saisonnalité (`hour_of_day`, `day_of_week`) livrées par le
@@ -89,26 +89,26 @@ Une saisonnalité de cette ampleur impose deux choix :
 Couples de KPI les plus corrélés :
 
 - `throughput` ↔ `cell_load` : -0.68
-- `jitter` ↔ `cell_load` : +0.63
-- `packet_loss` ↔ `latency` : +0.60
+- `jitter` ↔ `cell_load` : +0.62
+- `packet_loss` ↔ `latency` : +0.57
 
 |             |   throughput |   latency |   jitter |   packet_loss |   cell_load |
 |:------------|-------------:|----------:|---------:|--------------:|------------:|
-| throughput  |        1     |    -0.124 |   -0.436 |        -0.177 |      -0.684 |
-| latency     |       -0.124 |     1     |    0.239 |         0.605 |       0.333 |
-| jitter      |       -0.436 |     0.239 |    1     |         0.045 |       0.627 |
-| packet_loss |       -0.177 |     0.605 |    0.045 |         1     |       0.074 |
-| cell_load   |       -0.684 |     0.333 |    0.627 |         0.074 |       1     |
+| throughput  |        1     |    -0.119 |   -0.431 |        -0.176 |      -0.682 |
+| latency     |       -0.119 |     1     |    0.233 |         0.574 |       0.328 |
+| jitter      |       -0.431 |     0.233 |    1     |         0.03  |       0.616 |
+| packet_loss |       -0.176 |     0.574 |    0.03  |         1     |       0.05  |
+| cell_load   |       -0.682 |     0.328 |    0.616 |         0.05  |       1     |
 
 Autocorrélation (cellule de référence) :
 
 | kpi         |   lag_1min |   lag_2min |   lag_5min |   lag_10min |   lag_15min |   lag_30min |   lag_60min |   lag_120min |   lag_720min |   lag_1440min |
 |:------------|-----------:|-----------:|-----------:|------------:|------------:|------------:|------------:|-------------:|-------------:|--------------:|
-| throughput  |      0.972 |      0.965 |      0.944 |       0.924 |       0.911 |       0.899 |       0.875 |        0.785 |       -0.904 |         0.901 |
-| latency     |      0.875 |      0.787 |      0.527 |       0.333 |       0.232 |       0.181 |       0.161 |        0.143 |       -0.172 |         0.162 |
-| jitter      |      0.883 |      0.87  |      0.833 |       0.775 |       0.71  |       0.592 |       0.577 |        0.519 |       -0.594 |         0.584 |
-| packet_loss |      0.867 |      0.744 |      0.371 |       0.105 |       0     |       0     |       0.001 |        0     |       -0.003 |        -0     |
-| cell_load   |      0.963 |      0.963 |      0.962 |       0.961 |       0.96  |       0.953 |       0.929 |        0.834 |       -0.961 |         0.961 |
+| throughput  |      0.973 |      0.966 |      0.947 |       0.931 |       0.922 |       0.912 |       0.889 |        0.796 |       -0.919 |         0.916 |
+| latency     |      0.88  |      0.794 |      0.54  |       0.332 |       0.219 |       0.175 |       0.154 |        0.137 |       -0.166 |         0.155 |
+| jitter      |      0.894 |      0.879 |      0.835 |       0.766 |       0.69  |       0.552 |       0.539 |        0.483 |       -0.555 |         0.545 |
+| packet_loss |      0.867 |      0.744 |      0.371 |       0.106 |       0.001 |       0.001 |       0.001 |        0.001 |       -0.003 |         0     |
+| cell_load   |      0.964 |      0.963 |      0.963 |       0.962 |       0.962 |       0.955 |       0.93  |        0.834 |       -0.963 |         0.963 |
 
 Lecture : l'autocorrélation reste élevée jusqu'à quelques dizaines de minutes
 puis décroît. C'est le fondement du choix des modèles de prévision — les lags
@@ -127,24 +127,24 @@ règle du pire KPI :
 
 | etat     |     n |   pct |
 |:---------|------:|------:|
-| bon      |  8543 |  8.48 |
-| dégradé  | 49012 | 48.62 |
-| critique | 43245 | 42.9  |
+| bon      |  8395 |  8.33 |
+| dégradé  | 48964 | 48.58 |
+| critique | 43441 | 43.1  |
 
 Répartition par cellule (% du temps) :
 
 | cell_id   |   bon |   dégradé |   critique |
 |:----------|------:|----------:|-----------:|
-| cell_001  | 19.5  |     46.6  |      33.9  |
-| cell_002  |  0.87 |     56.5  |      42.62 |
-| cell_003  |  0    |     49.89 |      50.11 |
-| cell_004  | 11.87 |     43.86 |      44.28 |
-| cell_005  | 10.13 |     46.27 |      43.6  |
+| cell_001  | 19.07 |     46.88 |      34.05 |
+| cell_002  |  0.81 |     56.38 |      42.81 |
+| cell_003  |  0    |     49.5  |      50.5  |
+| cell_004  | 11.55 |     44.04 |      44.41 |
+| cell_005  | 10.21 |     46.08 |      43.71 |
 
 ### 6.1 Diagnostic : les seuils v1.1 sont déséquilibrés
 
-Une plateforme de supervision qui déclare l'état **critique 42.9 % du temps**
-et l'état « bon » seulement **8.5 % du temps** n'est pas
+Une plateforme de supervision qui déclare l'état **critique 43.1 % du temps**
+et l'état « bon » seulement **8.3 % du temps** n'est pas
 exploitable : l'alerte perd sa valeur de signal. La décomposition KPI par KPI
 identifie la cause.
 
@@ -152,26 +152,26 @@ identifie la cause.
 
 | kpi         |   bon |   dégradé |   critique |
 |:------------|------:|----------:|-----------:|
-| throughput  | 25.73 |     49.43 |      24.84 |
-| latency     | 81.98 |     17.72 |       0.3  |
-| jitter      | 36.34 |     37.73 |      25.93 |
-| packet_loss | 30.59 |     56.83 |      12.58 |
-| cell_load   | 54.57 |     21.48 |      23.95 |
+| throughput  | 25.82 |     49.38 |      24.79 |
+| latency     | 81.8  |     17.91 |       0.29 |
+| jitter      | 36.23 |     37.89 |      25.87 |
+| packet_loss | 30.54 |     56.82 |      12.63 |
+| cell_load   | 54.46 |     21.68 |      23.86 |
 
 Le mécanisme est arithmétique. Chaque KPI est classé « bon » entre
 26 % et 82 % du temps
 selon l'indicateur. L'agrégation par la règle du pire KPI exige que **les cinq**
 KPI soient simultanément bons : si les KPI étaient indépendants, la part de temps
-« bon » global tomberait à 1.28 %. On observe
-8.48 %, l'écart provenant de la corrélation entre KPI (§5) qui
+« bon » global tomberait à 1.27 %. On observe
+8.33 %, l'écart provenant de la corrélation entre KPI (§5) qui
 regroupe partiellement les dégradations sur les mêmes instants.
 
 Autrement dit : **les seuils ont été calibrés indicateur par indicateur, sans
 tenir compte de la règle d'agrégation qui les combine.** Les percentiles retenus
 par le Binôme A sont défendables KPI par KPI (`latency` est bon 82 % du temps),
 mais `throughput` (`good_min` = 107 Mbit/s) ne laisse que
-25.7 % du temps en « bon », et `jitter`
-(`good_max` = 4,0 ms) 36.3 % — ces deux seuils
+25.8 % du temps en « bon », et `jitter`
+(`good_max` = 4,0 ms) 36.2 % — ces deux seuils
 tirent l'état global vers le bas à eux seuls.
 
 **Position du Binôme B** : le contrat v1.1 est gelé et nous ne le modifions pas
@@ -198,15 +198,15 @@ Croisement état QoS (règles de seuils) × vérité terrain `is_anomaly`, en % 
 
 | qos_state   |   False |   True |
 |:------------|--------:|-------:|
-| bon         |    8.57 |   1.01 |
-| dégradé     |   49.08 |  13.12 |
-| critique    |   42.35 |  85.87 |
+| bon         |    8.43 |   0.85 |
+| dégradé     |   49.03 |  13.35 |
+| critique    |   42.54 |  85.79 |
 
 Lecture — c'est le résultat déterminant pour le cadrage des modèles. Les seuils
 seuls ne suffisent pas à identifier les anomalies : une part des points anormaux
 reste classée « bon » ou « dégradé » (anomalies de forme et non d'amplitude —
 dérive progressive, gigue anormale à charge normale), et surtout la colonne
-`False` montre que 42 % des points
+`False` montre que 43 % des points
 **normaux** sont déjà classés « critique ». Un exploitant qui se fierait aux
 seuls seuils recevrait donc une majorité de fausses alertes.
 
@@ -244,7 +244,7 @@ Contrôles automatiques de conformité du flux servi :
 Demandes de révision, par ordre de priorité :
 
 1. **Recalibrage des seuils QoS (v1.2)** — cf. §6.1. L'état « bon » ne couvre que
-   8.5 % du temps et l'état « critique » 42.9 %.
+   8.3 % du temps et l'état « critique » 43.1 %.
    Seuils principalement en cause : `throughput.good_min` et `jitter.good_max`.
    Nous continuons d'utiliser les seuils v1.1 tant que la révision n'est pas actée.
 2. **`GET /eval/labels` : horodatages non rééchantillonnés.** L'endpoint sert les

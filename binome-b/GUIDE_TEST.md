@@ -77,7 +77,7 @@ autre nombre signifie que le contrat a changé.
 cd ..                       # racine du dépôt
 ls reports/*.md
 ls reports/figures/*/       # 14 figures : eda/ 7, anomalie/ 3, prevision/ 4
-ls reports/metrics/         # 17 fichiers CSV/JSON
+ls reports/metrics/         # 16 fichiers CSV/JSON
 ```
 
 Deux rapports attendus : `rapport_eda.md` et `rapport_evaluation_modeles.md`.
@@ -111,10 +111,10 @@ print(o[['detecteur','precision','rappel','f1','pr_auc','fausses_alertes_par_heu
 
 | detecteur | precision | rappel | f1 | pr_auc | fausses alertes/h |
 |---|---|---|---|---|---|
-| seuils_contrat | 0,029 | 0,823 | 0,056 | 0,027 | 0,63 |
-| isolation_forest | 0,650 | 0,657 | **0,653** | **0,614** | **0,02** |
-| dbscan | 0,284 | 0,190 | 0,228 | 0,390 | 0,02 |
-| autoencodeur | 0,364 | 0,387 | 0,375 | 0,363 | 0,01 |
+| seuils_contrat | 0,026 | 0,703 | 0,051 | 0,023 | 0,55 |
+| isolation_forest | 0,622 | 0,657 | **0,639** | **0,612** | **0,018** |
+| dbscan | 0,277 | 0,187 | 0,223 | 0,391 | 0,018 |
+| autoencodeur | 0,383 | 0,397 | 0,390 | 0,363 | 0,003 |
 
 Lecture : l'Isolation Forest domine. L'autoencodeur (« modèle avancé ») perd —
 c'est un résultat assumé et documenté au §2.5 du rapport d'évaluation, pas un
@@ -133,10 +133,10 @@ print(d.pivot_table(index='modele', columns='horizon_min', values='gain_mae_vs_p
 
 ```
 horizon_min             5      15     30
-moyenne_mobile_15m    1.05   0.95   1.26
-naif_saisonnier_24h -34.12 -24.12 -12.92
-persistance           0.00   0.00  -0.01
-xgboost               9.78  14.31  21.22
+moyenne_mobile_15m    1.27   1.17   1.53
+naif_saisonnier_24h -34.24 -24.67 -13.80
+persistance          -0.01   0.00  -0.00
+xgboost               9.68  14.40  20.48
 ```
 
 Le point à vérifier : **le gain de XGBoost croît avec l'horizon**. S'il décroissait,
@@ -182,6 +182,7 @@ streamlit run src/dashboard/app.py       # -> http://localhost:8501
 | Onglet | Ce qui doit s'afficher |
 |---|---|
 | **Vue d'ensemble** | 5 vignettes de cellules avec 🟢/🟠/🔴 et, sous chacune, le KPI responsable (ex. `latency (+180 % vs seuil bon)`) |
+| **Temps réel** | sans simulateur actif : un message indiquant la commande à lancer. Avec simulateur : l'âge de la dernière mesure et les courbes du flux (voir niveau 3.6) |
 | **KPI & anomalies** | 6 graphiques synchronisés : 5 KPI + score d'atypicité ; seuils en tirets ; points rouges d'alerte reportés sur tous les KPI |
 | **Prévision** | courbe observée en noir + 3 courbes pointillées (+5/+15/+30 min), et 3 vignettes d'état QoS annoncé |
 | **Qualité des modèles** | les tableaux de métriques du niveau 1.3 |
@@ -292,8 +293,8 @@ NETQOS_DATA_SOURCE=api API_BASE_URL=http://localhost:8010/api/v1 python -m src.s
 ```
 
 **Attendu :** exactement les valeurs du niveau 1.3 (`isolation_forest` :
-`P=0.650 R=0.657 F1=0.653`), et une prévalence affichée de
-`train 1.27 % · val 1.11 % · test 1.51 %`.
+`P=0.622 R=0.657 F1=0.639`), et une prévalence non nulle sur les trois segments
+(de l'ordre de 1,3 %).
 
 > Si la prévalence affiche **0,00 %**, c'est que le contournement du défaut
 > d'horodatage de `/eval/labels` a été retiré — voir §2 des réserves dans
@@ -414,9 +415,11 @@ print(s.summary().to_string(index=False))
 ```
 
 **Attendu :** `train 60450` · `val 19850` · `test 19850`, et surtout un **trou d'au
-moins 60 minutes** entre la fin d'un segment et le début du suivant (fin de train
-`06:00`, début de val `07:01`). C'est la purge qui évite qu'une fenêtre glissante
-de 60 min chevauche deux segments.
+moins 60 minutes** entre la fin d'un segment et le début du suivant (par exemple
+fin de train `01:27`, début de val `02:28`). C'est la purge qui évite qu'une
+fenêtre glissante de 60 min chevauche deux segments. Les horodatages exacts
+dépendent de la date de génération du jeu de données ; c'est l'écart d'au moins
+61 minutes qui doit être vérifié, pas les valeurs elles-mêmes.
 
 ### L'API imposée mais absente doit échouer explicitement
 
@@ -469,6 +472,12 @@ Contrôles pendant l'exécution :
 
 ## Récapitulatif des valeurs de référence
 
+> Ces valeurs correspondent au jeu `binome-a/data/raw/historical_kpi.csv` versionné
+> dans le dépôt. Le générateur du Binôme A ancre l'historique sur la date
+> d'exécution : **régénérer les données déplace la fenêtre temporelle** et fait
+> bouger les métriques de quelques centièmes, sans changer les conclusions. Après
+> une régénération, relancer la chaîne du niveau 5 et actualiser ce tableau.
+
 | Grandeur | Valeur attendue |
 |---|---|
 | Lignes d'historique nettoyé | 100 800 |
@@ -479,11 +488,11 @@ Contrôles pendant l'exécution :
 | Taux d'anomalie global | 1,2778 % |
 | Découpage train / val / test | 60 450 / 19 850 / 19 850 |
 | Purge entre segments | ≥ 60 min |
-| Isolation Forest — F1 / PR-AUC | 0,653 / 0,614 |
-| Isolation Forest — fausses alertes | 0,02 / h |
+| Isolation Forest — F1 / PR-AUC | 0,639 / 0,612 |
+| Isolation Forest — fausses alertes | 0,018 / h |
 | Épisodes détectés | 9 / 9 |
-| XGBoost — gain MAE (5/15/30 min) | +9,8 % / +14,3 % / +21,2 % |
-| Exactitude de l'état QoS annoncé | ≈ 83 % |
+| XGBoost — gain MAE (5/15/30 min) | +9,7 % / +14,4 % / +20,5 % |
+| Exactitude de l'état QoS annoncé | ≈ 82 % |
 | Écart API ↔ CSV local | 0,0000000000 |
 | Dashboard | 6 onglets, 0 exception |
 
