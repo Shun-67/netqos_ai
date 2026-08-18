@@ -72,10 +72,10 @@ fonctionnement atteignable dans un déploiement réel sans historique annoté.
 
 | detecteur        |   precision |   rappel |     f1 |   pr_auc |   roc_auc |   taux_alerte_pct |   rappel_episode |   fausses_alertes_par_heure |
 |:-----------------|------------:|---------:|-------:|---------:|----------:|------------------:|-----------------:|----------------------------:|
-| isolation_forest |      0.6502 |   0.6567 | 0.6534 |   0.6137 |    0.9527 |            1.5264 |           1      |                      0.0211 |
-| autoencodeur     |      0.3636 |   0.3867 | 0.3748 |   0.3628 |    0.947  |            1.6071 |           1      |                      0.0091 |
-| dbscan           |      0.2836 |   0.19   | 0.2275 |   0.3895 |    0.9543 |            1.0126 |           0.4444 |                      0.0181 |
-| seuils_contrat   |      0.0289 |   0.8233 | 0.0558 |   0.0266 |    0.7021 |           43.068  |           1      |                      0.6344 |
+| isolation_forest |      0.6215 |   0.6567 | 0.6386 |   0.6122 |    0.9598 |            1.597  |           1      |                      0.0181 |
+| autoencodeur     |      0.3826 |   0.3967 | 0.3895 |   0.3628 |    0.9438 |            1.5668 |           0.8889 |                      0.003  |
+| dbscan           |      0.2772 |   0.1867 | 0.2231 |   0.3909 |    0.9559 |            1.0176 |           0.4444 |                      0.0181 |
+| seuils_contrat   |      0.0263 |   0.7033 | 0.0507 |   0.0232 |    0.6518 |           40.4232 |           1      |                      0.5529 |
 
 ### 2.2 Résultats au point F1-optimal (borne haute)
 
@@ -87,19 +87,19 @@ d'incidents annoté.
 
 | detecteur        |   precision |   rappel |     f1 |   pr_auc |   roc_auc |   taux_alerte_pct |   rappel_episode |   fausses_alertes_par_heure |
 |:-----------------|------------:|---------:|-------:|---------:|----------:|------------------:|-----------------:|----------------------------:|
-| isolation_forest |      0.7216 |   0.6133 | 0.6631 |   0.6137 |    0.9527 |            1.2846 |                1 |                      0.0091 |
-| autoencodeur     |      0.4927 |   0.7867 | 0.6059 |   0.3628 |    0.947  |            2.4131 |                1 |                      0.0091 |
-| dbscan           |      0.5177 |   0.6833 | 0.5891 |   0.3895 |    0.9543 |            1.995  |                1 |                      0.0423 |
-| seuils_contrat   |      0.0289 |   0.8233 | 0.0558 |   0.0266 |    0.7021 |           43.068  |                1 |                      0.6344 |
+| isolation_forest |      0.7261 |   0.5567 | 0.6302 |   0.6122 |    0.9598 |            1.1587 |                1 |                      0.0181 |
+| dbscan           |      0.5062 |   0.8133 | 0.624  |   0.3909 |    0.9559 |            2.4282 |                1 |                      0.0453 |
+| autoencodeur     |      0.501  |   0.8133 | 0.6201 |   0.3628 |    0.9438 |            2.4534 |                1 |                      0.003  |
+| seuils_contrat   |      0.0263 |   0.7033 | 0.0507 |   0.0232 |    0.6518 |           40.4232 |                1 |                      0.5529 |
 
 ### 2.3 Comparaison indépendante du seuil
 
 | detecteur        |   pr_auc |   roc_auc |
 |:-----------------|---------:|----------:|
-| isolation_forest |   0.6137 |    0.9527 |
-| dbscan           |   0.3895 |    0.9543 |
-| autoencodeur     |   0.3628 |    0.947  |
-| seuils_contrat   |   0.0266 |    0.7021 |
+| isolation_forest |   0.6122 |    0.9598 |
+| dbscan           |   0.3909 |    0.9559 |
+| autoencodeur     |   0.3628 |    0.9438 |
+| seuils_contrat   |   0.0232 |    0.6518 |
 
 Deux enseignements méthodologiques :
 
@@ -110,10 +110,10 @@ Deux enseignements méthodologiques :
    elle, sépare franchement les détecteurs. C'est elle qui est retenue comme
    métrique de référence.
 2. **La baseline par seuils est disqualifiée.** Sa PR-AUC de
-   0.027 est de l'ordre de la prévalence
+   0.023 est de l'ordre de la prévalence
    (1.51 % ≈ 0.0151), soit le niveau d'un tirage
-   aléatoire. Elle atteint pourtant un rappel de 0.82 — mais
-   en déclarant 43.1 % du temps en alerte, ce qui
+   aléatoire. Elle atteint pourtant un rappel de 0.70 — mais
+   en déclarant 40.4 % du temps en alerte, ce qui
    n'est pas exploitable. C'est la traduction chiffrée du déséquilibre des seuils
    v1.1 diagnostiqué au §6.1 du rapport d'EDA.
 
@@ -123,15 +123,15 @@ Grille explorée, sélection sur la PR-AUC de validation :
 
 | goulot       |   filtrage_extremes |   lignes_entrainement |   pr_auc_validation |
 |:-------------|--------------------:|----------------------:|--------------------:|
-| (16, 6, 16)  |                0.05 |                 57427 |              0.448  |
-| (16, 8, 16)  |                0    |                 60450 |              0.4229 |
-| (20, 10, 20) |                0.02 |                 59241 |              0.3899 |
-| (16, 8, 16)  |                0.02 |                 59241 |              0.378  |
-| (12, 4, 12)  |                0.02 |                 59241 |              0.3545 |
+| (16, 6, 16)  |                0.05 |                 57427 |              0.4182 |
+| (20, 10, 20) |                0.02 |                 59241 |              0.403  |
+| (16, 8, 16)  |                0.02 |                 59241 |              0.3989 |
+| (16, 8, 16)  |                0    |                 60450 |              0.3873 |
+| (12, 4, 12)  |                0.02 |                 59241 |              0.3817 |
 
 ### 2.5 Verdict baseline vs modèle avancé
 
-L'**autoencodeur ne bat pas la baseline apprise**. Sa PR-AUC (0.363) reste inférieure à celle de l'Isolation Forest (0.614), et son F1 au point d'exploitation (0.375) est nettement en dessous (0.653). Conformément au §8.2 de la fiche — « un modèle avancé ne se justifie que s'il bat la baseline » — **le modèle retenu pour le déploiement est l'Isolation Forest**, et non l'autoencodeur.
+L'**autoencodeur ne bat pas la baseline apprise**. Sa PR-AUC (0.363) reste inférieure à celle de l'Isolation Forest (0.612), et son F1 au point d'exploitation (0.390) est nettement en dessous (0.639). Conformément au §8.2 de la fiche — « un modèle avancé ne se justifie que s'il bat la baseline » — **le modèle retenu pour le déploiement est l'Isolation Forest**, et non l'autoencodeur.
 
 Interprétation de cet échec — elle est instructive et non anecdotique. Comparons
 l'écart de F1 entre le seuil non supervisé et le seuil optimal, qui mesure la
@@ -139,18 +139,18 @@ sensibilité de chaque détecteur au calibrage de son seuil :
 
 | detecteur        |   ecart_f1_optimal_moins_exploitation |
 |:-----------------|--------------------------------------:|
-| dbscan           |                                 0.362 |
+| dbscan           |                                 0.401 |
 | autoencodeur     |                                 0.231 |
-| isolation_forest |                                 0.01  |
 | seuils_contrat   |                                 0     |
+| isolation_forest |                                -0.008 |
 
 Deux détecteurs sont fortement dépendants de leur calibrage : DBSCAN
-(+0.362) et l'autoencodeur (+0.231). Tous
+(+0.401) et l'autoencodeur (+0.231). Tous
 deux fondent leur score sur une **distance ou une erreur non bornée**, dont la
 distribution se déplace d'un segment temporel à l'autre : un seuil calibré sur
 l'entraînement se retrouve mal placé au test. L'Isolation Forest, dont le score
 est une profondeur d'isolement normalisée et bornée, ne perd que
-+0.010 — c'est sa robustesse au calibrage, autant que sa
+-0.008 — c'est sa robustesse au calibrage, autant que sa
 PR-AUC, qui la désigne pour le déploiement : en exploitation réelle, on ne
 dispose pas d'étiquettes pour régler le seuil.
 
@@ -169,23 +169,23 @@ averti. On raisonne donc par **épisode** : un intervalle contigu d'anomalie ré
 | Épisodes détectés au moins une fois | 9 |
 | Épisodes manqués | 0 |
 | Durée médiane des épisodes détectés | 36 min |
-| Part médiane de points détectés par épisode | 70% |
+| Part médiane de points détectés par épisode | 67% |
 
 | cell_id   | debut                     |   duree_min | detecte   |   part_points_detectes |   pic_latence_ratio |   pic_packet_loss |   score_max |
 |:----------|:--------------------------|------------:|:----------|-----------------------:|--------------------:|------------------:|------------:|
-| cell_001  | 2026-08-09 11:55:00+00:00 |           6 | True      |                  1     |               4.504 |            79.058 |      0.7402 |
-| cell_001  | 2026-08-10 17:34:00+00:00 |          25 | True      |                  0.96  |               1.001 |             0.866 |      0.6763 |
-| cell_001  | 2026-08-11 02:30:00+00:00 |          27 | True      |                  0.704 |               2.255 |             2.294 |      0.6267 |
-| cell_002  | 2026-08-09 11:21:00+00:00 |          32 | True      |                  0.562 |               1.984 |             2.578 |      0.5852 |
-| cell_004  | 2026-08-11 05:41:00+00:00 |          36 | True      |                  0.778 |               2.256 |             2.792 |      0.6374 |
-| cell_004  | 2026-08-10 00:27:00+00:00 |          38 | True      |                  0.737 |               2.175 |             2     |      0.6295 |
-| cell_004  | 2026-08-10 05:09:00+00:00 |          38 | True      |                  0.526 |               1.888 |             1.798 |      0.6172 |
-| cell_002  | 2026-08-10 16:00:00+00:00 |          40 | True      |                  0.6   |               1.887 |             2.758 |      0.5961 |
-| cell_004  | 2026-08-11 06:42:00+00:00 |          58 | True      |                  0.517 |               1.701 |             2.242 |      0.5958 |
+| cell_001  | 2026-08-14 07:22:00+00:00 |           6 | True      |                  1     |               4.565 |            78.908 |      0.7515 |
+| cell_001  | 2026-08-15 13:01:00+00:00 |          25 | True      |                  0.96  |               1.019 |             0.99  |      0.6297 |
+| cell_001  | 2026-08-15 21:57:00+00:00 |          27 | True      |                  0.667 |               2.205 |             2.36  |      0.6302 |
+| cell_002  | 2026-08-14 06:48:00+00:00 |          32 | True      |                  0.625 |               2.014 |             2.126 |      0.5956 |
+| cell_004  | 2026-08-16 01:08:00+00:00 |          36 | True      |                  0.778 |               2.232 |             2.25  |      0.628  |
+| cell_004  | 2026-08-14 19:54:00+00:00 |          38 | True      |                  0.737 |               2.133 |             2.47  |      0.6171 |
+| cell_004  | 2026-08-15 00:36:00+00:00 |          38 | True      |                  0.553 |               1.865 |             1.506 |      0.5996 |
+| cell_002  | 2026-08-15 11:27:00+00:00 |          40 | True      |                  0.575 |               1.913 |             2.968 |      0.5889 |
+| cell_004  | 2026-08-16 02:09:00+00:00 |          58 | True      |                  0.5   |               1.692 |             1.782 |      0.6033 |
 
 Lecture : le détecteur retenu signale **tous** les épisodes du segment de test.
 Il ne les couvre en revanche que partiellement — la part médiane de points
-détectés par épisode est de 70%. Pour
+détectés par épisode est de 67%. Pour
 un usage de supervision, c'est le comportement souhaitable : l'alerte est levée,
 l'exploitant investigue, et la précision par point importe moins que l'absence
 d'angle mort.
@@ -216,31 +216,31 @@ Gain de MAE relatif à la persistance (%, moyenne sur les 5 KPI) — positif = m
 
 | modele              |      5 |     15 |     30 |
 |:--------------------|-------:|-------:|-------:|
-| arima               |   1.37 |  -0.26 |  -1.7  |
-| moyenne_mobile_15m  |   0.61 |   1.55 |   2.08 |
-| naif_saisonnier_24h | -36.22 | -21.05 | -12.2  |
-| persistance         |   0.01 |   0    |  -0    |
-| xgboost             |   8.67 |  13.59 |  21.61 |
+| arima               |   1.45 |  -1.21 |  -1.6  |
+| moyenne_mobile_15m  |   0.68 |   1.58 |   2.42 |
+| naif_saisonnier_24h | -37.23 | -22.93 | -12.68 |
+| persistance         |   0    |  -0    |   0.01 |
+| xgboost             |   8.24 |  12.05 |  20.86 |
 
 MAE détaillée par KPI et horizon :
 
 |                     |   arima |   moyenne_mobile_15m |   naif_saisonnier_24h |   persistance |   xgboost |
 |:--------------------|--------:|---------------------:|----------------------:|--------------:|----------:|
-| ('cell_load', 5)    |  4.0767 |               4.0786 |                5.0597 |        4.1705 |    3.7168 |
-| ('cell_load', 15)   |  4.6822 |               4.6978 |                5.2403 |        4.7428 |    4.0182 |
-| ('cell_load', 30)   |  5.1747 |               5.1751 |                5.5299 |        5.0772 |    3.9324 |
-| ('jitter', 5)       |  0.2472 |               0.2459 |                0.349  |        0.2615 |    0.2386 |
-| ('jitter', 15)      |  0.2883 |               0.2774 |                0.3556 |        0.2926 |    0.2541 |
-| ('jitter', 30)      |  0.32   |               0.3064 |                0.3761 |        0.3214 |    0.2604 |
-| ('latency', 5)      |  1.0722 |               1.21   |                1.6546 |        1.0908 |    0.9815 |
-| ('latency', 15)     |  1.3582 |               1.3966 |                1.6868 |        1.3483 |    1.1351 |
-| ('latency', 30)     |  1.5485 |               1.4727 |                1.5187 |        1.4964 |    1.0546 |
-| ('packet_loss', 5)  |  0.1886 |               0.1742 |                0.252  |        0.18   |    0.1686 |
-| ('packet_loss', 15) |  0.1878 |               0.1766 |                0.234  |        0.1818 |    0.1629 |
-| ('packet_loss', 30) |  0.1907 |               0.1767 |                0.2394 |        0.1869 |    0.1594 |
-| ('throughput', 5)   |  2.4344 |               2.4241 |                3.3514 |        2.4886 |    2.3053 |
-| ('throughput', 15)  |  2.9562 |               2.8859 |                3.5294 |        2.9555 |    2.5626 |
-| ('throughput', 30)  |  3.353  |               3.2831 |                3.4852 |        3.3045 |    2.5679 |
+| ('cell_load', 5)    |  4.1238 |               4.1075 |                5.2089 |        4.2488 |    3.857  |
+| ('cell_load', 15)   |  4.7124 |               4.6744 |                5.5318 |        4.8376 |    4.1388 |
+| ('cell_load', 30)   |  5.0478 |               5.0138 |                5.6354 |        5.0156 |    3.9689 |
+| ('jitter', 5)       |  0.2519 |               0.2476 |                0.3505 |        0.262  |    0.2419 |
+| ('jitter', 15)      |  0.2933 |               0.2818 |                0.3534 |        0.2956 |    0.2581 |
+| ('jitter', 30)      |  0.3324 |               0.3171 |                0.3774 |        0.3315 |    0.2657 |
+| ('latency', 5)      |  1.0497 |               1.1863 |                1.641  |        1.0672 |    0.9288 |
+| ('latency', 15)     |  1.3404 |               1.3645 |                1.6781 |        1.3162 |    1.139  |
+| ('latency', 30)     |  1.5058 |               1.425  |                1.5101 |        1.4586 |    1.0811 |
+| ('packet_loss', 5)  |  0.1839 |               0.1726 |                0.2505 |        0.1784 |    0.167  |
+| ('packet_loss', 15) |  0.1894 |               0.1742 |                0.2344 |        0.1805 |    0.1646 |
+| ('packet_loss', 30) |  0.1874 |               0.1749 |                0.2387 |        0.1855 |    0.1596 |
+| ('throughput', 5)   |  2.4236 |               2.41   |                3.3507 |        2.4705 |    2.3488 |
+| ('throughput', 15)  |  2.9472 |               2.8701 |                3.5423 |        2.871  |    2.5597 |
+| ('throughput', 30)  |  3.4144 |               3.3305 |                3.4854 |        3.3195 |    2.5313 |
 
 #### Périmètre : `test_complet`
 
@@ -248,66 +248,66 @@ Gain de MAE relatif à la persistance (%, moyenne sur les 5 KPI) — positif = m
 
 | modele              |      5 |     15 |     30 |
 |:--------------------|-------:|-------:|-------:|
-| moyenne_mobile_15m  |   1.05 |   0.95 |   1.26 |
-| naif_saisonnier_24h | -34.12 | -24.12 | -12.92 |
-| persistance         |   0    |   0    |  -0.01 |
-| xgboost             |   9.78 |  14.31 |  21.22 |
+| moyenne_mobile_15m  |   1.27 |   1.17 |   1.53 |
+| naif_saisonnier_24h | -34.24 | -24.67 | -13.8  |
+| persistance         |  -0.01 |   0    |  -0    |
+| xgboost             |   9.68 |  14.4  |  20.48 |
 
 MAE détaillée par KPI et horizon :
 
 |                     |   moyenne_mobile_15m |   naif_saisonnier_24h |   persistance |   xgboost |
 |:--------------------|---------------------:|----------------------:|--------------:|----------:|
-| ('cell_load', 5)    |               4.052  |                5.2601 |        4.1748 |    3.8207 |
-| ('cell_load', 15)   |               4.3559 |                5.2612 |        4.3795 |    3.8297 |
-| ('cell_load', 30)   |               5.0844 |                5.2595 |        4.9839 |    3.8502 |
-| ('jitter', 5)       |               0.2658 |                0.3789 |        0.2745 |    0.2504 |
-| ('jitter', 15)      |               0.2821 |                0.3788 |        0.2885 |    0.2599 |
-| ('jitter', 30)      |               0.2983 |                0.3788 |        0.3088 |    0.2603 |
-| ('latency', 5)      |               1.2247 |                1.7267 |        1.1498 |    1.0585 |
-| ('latency', 15)     |               1.4188 |                1.7273 |        1.3936 |    1.1323 |
-| ('latency', 30)     |               1.5379 |                1.727  |        1.5703 |    1.1811 |
-| ('packet_loss', 5)  |               0.2225 |                0.2879 |        0.2287 |    0.1924 |
-| ('packet_loss', 15) |               0.228  |                0.2878 |        0.2356 |    0.1931 |
-| ('packet_loss', 30) |               0.2305 |                0.2877 |        0.2407 |    0.1944 |
-| ('throughput', 5)   |               2.6833 |                3.6082 |        2.7647 |    2.5485 |
-| ('throughput', 15)  |               2.9134 |                3.6064 |        2.9301 |    2.5699 |
-| ('throughput', 30)  |               3.4188 |                3.6045 |        3.3729 |    2.5759 |
+| ('cell_load', 5)    |               4.0242 |                5.2341 |        4.1655 |    3.8156 |
+| ('cell_load', 15)   |               4.2903 |                5.2346 |        4.3358 |    3.8045 |
+| ('cell_load', 30)   |               4.965  |                5.2323 |        4.8968 |    3.82   |
+| ('jitter', 5)       |               0.2681 |                0.3827 |        0.2759 |    0.2521 |
+| ('jitter', 15)      |               0.2858 |                0.3826 |        0.2917 |    0.2621 |
+| ('jitter', 30)      |               0.3019 |                0.3826 |        0.3135 |    0.263  |
+| ('latency', 5)      |               1.196  |                1.7007 |        1.1284 |    1.041  |
+| ('latency', 15)     |               1.3781 |                1.7013 |        1.3576 |    1.0969 |
+| ('latency', 30)     |               1.4926 |                1.701  |        1.5238 |    1.177  |
+| ('packet_loss', 5)  |               0.2217 |                0.287  |        0.2283 |    0.1921 |
+| ('packet_loss', 15) |               0.2267 |                0.2869 |        0.2345 |    0.1923 |
+| ('packet_loss', 30) |               0.2289 |                0.2869 |        0.2391 |    0.1936 |
+| ('throughput', 5)   |               2.6788 |                3.6107 |        2.7696 |    2.5539 |
+| ('throughput', 15)  |               2.8889 |                3.609  |        2.9159 |    2.5541 |
+| ('throughput', 30)  |               3.3569 |                3.6071 |        3.3255 |    2.5767 |
 
 
 ### 3.2 Sélection de l'objectif d'apprentissage — le résultat le plus instructif
 
 | kpi         |   horizon_min | objectif          |   mae_validation | retenu   |
 |:------------|--------------:|:------------------|-----------------:|:---------|
-| throughput  |             5 | reg:squarederror  |          2.80368 | False    |
-| throughput  |             5 | reg:absoluteerror |          2.75544 | True     |
-| throughput  |            15 | reg:squarederror  |          2.96255 | False    |
-| throughput  |            15 | reg:absoluteerror |          2.79983 | True     |
-| throughput  |            30 | reg:squarederror  |          3.03908 | False    |
-| throughput  |            30 | reg:absoluteerror |          2.83197 | True     |
-| latency     |             5 | reg:squarederror  |          1.21732 | False    |
-| latency     |             5 | reg:absoluteerror |          1.02506 | True     |
-| latency     |            15 | reg:squarederror  |          1.3198  | False    |
-| latency     |            15 | reg:absoluteerror |          1.0664  | True     |
-| latency     |            30 | reg:squarederror  |          1.47411 | False    |
-| latency     |            30 | reg:absoluteerror |          1.08512 | True     |
-| jitter      |             5 | reg:squarederror  |          0.29104 | False    |
-| jitter      |             5 | reg:absoluteerror |          0.28031 | True     |
-| jitter      |            15 | reg:squarederror  |          0.32315 | False    |
-| jitter      |            15 | reg:absoluteerror |          0.2887  | True     |
-| jitter      |            30 | reg:squarederror  |          0.34604 | False    |
-| jitter      |            30 | reg:absoluteerror |          0.29201 | True     |
-| packet_loss |             5 | reg:squarederror  |          0.35093 | False    |
-| packet_loss |             5 | reg:absoluteerror |          0.25188 | True     |
-| packet_loss |            15 | reg:squarederror  |          0.37799 | False    |
-| packet_loss |            15 | reg:absoluteerror |          0.25262 | True     |
-| packet_loss |            30 | reg:squarederror  |          0.382   | False    |
-| packet_loss |            30 | reg:absoluteerror |          0.25334 | True     |
-| cell_load   |             5 | reg:squarederror  |          3.8434  | False    |
-| cell_load   |             5 | reg:absoluteerror |          3.81657 | True     |
-| cell_load   |            15 | reg:squarederror  |          3.88202 | False    |
-| cell_load   |            15 | reg:absoluteerror |          3.83715 | True     |
-| cell_load   |            30 | reg:squarederror  |          3.91784 | False    |
-| cell_load   |            30 | reg:absoluteerror |          3.87973 | True     |
+| throughput  |             5 | reg:squarederror  |          2.79991 | False    |
+| throughput  |             5 | reg:absoluteerror |          2.73735 | True     |
+| throughput  |            15 | reg:squarederror  |          3.06253 | False    |
+| throughput  |            15 | reg:absoluteerror |          2.84947 | True     |
+| throughput  |            30 | reg:squarederror  |          3.12376 | False    |
+| throughput  |            30 | reg:absoluteerror |          2.86392 | True     |
+| latency     |             5 | reg:squarederror  |          1.1694  | False    |
+| latency     |             5 | reg:absoluteerror |          0.99199 | True     |
+| latency     |            15 | reg:squarederror  |          1.38648 | False    |
+| latency     |            15 | reg:absoluteerror |          1.03324 | True     |
+| latency     |            30 | reg:squarederror  |          1.51353 | False    |
+| latency     |            30 | reg:absoluteerror |          1.0439  | True     |
+| jitter      |             5 | reg:squarederror  |          0.28843 | False    |
+| jitter      |             5 | reg:absoluteerror |          0.2716  | True     |
+| jitter      |            15 | reg:squarederror  |          0.3344  | False    |
+| jitter      |            15 | reg:absoluteerror |          0.28515 | True     |
+| jitter      |            30 | reg:squarederror  |          0.36312 | False    |
+| jitter      |            30 | reg:absoluteerror |          0.28664 | True     |
+| packet_loss |             5 | reg:squarederror  |          0.34421 | False    |
+| packet_loss |             5 | reg:absoluteerror |          0.25134 | True     |
+| packet_loss |            15 | reg:squarederror  |          0.36731 | False    |
+| packet_loss |            15 | reg:absoluteerror |          0.2524  | True     |
+| packet_loss |            30 | reg:squarederror  |          0.43725 | False    |
+| packet_loss |            30 | reg:absoluteerror |          0.25305 | True     |
+| cell_load   |             5 | reg:squarederror  |          3.86923 | False    |
+| cell_load   |             5 | reg:absoluteerror |          3.84427 | True     |
+| cell_load   |            15 | reg:squarederror  |          3.92464 | False    |
+| cell_load   |            15 | reg:absoluteerror |          3.89989 | True     |
+| cell_load   |            30 | reg:squarederror  |          3.94713 | False    |
+| cell_load   |            30 | reg:absoluteerror |          3.90832 | True     |
 
 Ce tableau documente une erreur corrigée en cours de route, qu'il vaut la peine
 d'expliciter. Une première version entraînait XGBoost avec l'objectif par défaut
@@ -333,19 +333,19 @@ Gain de MAE de XGBoost sur la persistance (%, test complet) :
 
 |   horizon_min |   gain_moyen_pct |
 |--------------:|-----------------:|
-|             5 |              9.8 |
-|            15 |             14.3 |
-|            30 |             21.2 |
+|             5 |              9.7 |
+|            15 |             14.4 |
+|            30 |             20.5 |
 
 Détail par KPI :
 
 | kpi         |    5 |   15 |   30 |
 |:------------|-----:|-----:|-----:|
-| cell_load   |  8.5 | 12.6 | 22.8 |
-| jitter      |  8.8 |  9.9 | 15.7 |
-| latency     |  7.9 | 18.8 | 24.8 |
-| packet_loss | 15.9 | 18   | 19.2 |
-| throughput  |  7.8 | 12.3 | 23.6 |
+| cell_load   |  8.4 | 12.2 | 22   |
+| jitter      |  8.6 | 10.2 | 16.1 |
+| latency     |  7.7 | 19.2 | 22.8 |
+| packet_loss | 15.8 | 18   | 19   |
+| throughput  |  7.8 | 12.4 | 22.5 |
 
 Le gain **croît avec l'horizon** — c'est le comportement attendu et il valide la
 démarche : à 5 minutes, la persistance est déjà excellente sur une série
@@ -361,12 +361,12 @@ cette progression aurait signalé une fuite ou une erreur d'alignement des cible
 Deux baselines méritent un commentaire, parce que leur échec est informatif :
 
 - **Le naïf saisonnier à 24 h est la plus mauvaise référence** (jusqu'à
-  52 %
+  54 %
   de MAE en plus que la persistance). Il exploite exactement la composante que
   Prophet modélise. Son échec confirme le cadrage de l'EDA — à 5–30 min la
   dynamique autorégressive domine largement la saisonnalité journalière — et
   justifie a posteriori d'avoir écarté Prophet.
-- **ARIMA n'apporte rien** : son gain sur la persistance est de +1.4 % à 5 min, -0.3 % à 15 min, -1.7 % à 30 min. Un ARIMA ajusté sur une
+- **ARIMA n'apporte rien** : son gain sur la persistance est de +1.4 % à 5 min, -1.2 % à 15 min, -1.6 % à 30 min. Un ARIMA ajusté sur une
   fenêtre de 24 h capture le niveau local et une autocorrélation à court terme,
   ce que la persistance et la moyenne mobile fournissent déjà pour un coût nul.
   Ce qu'il ne peut pas capturer, c'est l'information **inter-KPI** : que la
@@ -381,9 +381,9 @@ annoncé. On applique donc les seuils du contrat aux KPI **prévus**, et on comp
 
 |   horizon_min |   exactitude_etat |   part_critiques_manques |     n |
 |--------------:|------------------:|-------------------------:|------:|
-|             5 |            0.8345 |                   0.1362 | 19820 |
-|            15 |            0.8323 |                   0.1483 | 19820 |
-|            30 |            0.8339 |                   0.1533 | 19820 |
+|             5 |            0.8239 |                   0.1438 | 19820 |
+|            15 |            0.8207 |                   0.1479 | 19820 |
+|            30 |            0.8188 |                   0.1521 | 19820 |
 
 Lecture : l'état QoS annoncé est correct pour environ 83 % des points, et cette
 exactitude ne se dégrade quasiment pas entre 5 et 30 minutes — la chaîne complète

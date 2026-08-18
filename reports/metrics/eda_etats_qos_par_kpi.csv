@@ -1,6 +1,6 @@
 kpi,bon,dégradé,critique
-throughput,25.73,49.43,24.84
-latency,81.98,17.72,0.3
-jitter,36.34,37.73,25.93
-packet_loss,30.59,56.83,12.58
-cell_load,54.57,21.48,23.95
+throughput,25.82,49.38,24.79
+latency,81.8,17.91,0.29
+jitter,36.23,37.89,25.87
+packet_loss,30.54,56.82,12.63
+cell_load,54.46,21.68,23.86

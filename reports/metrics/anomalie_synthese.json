@@ -27,7 +27,7 @@
     "hour_cos"
   ],
   "meilleur_detecteur_exploitation": "isolation_forest",
-  "f1_meilleur": 0.6534,
+  "f1_meilleur": 0.6386,
   "episodes_test": 9,
   "episodes_manques": 0,
   "duree_mediane_episodes_manques_min": null,
