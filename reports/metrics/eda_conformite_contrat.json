@@ -1,0 +1,13 @@
+{
+  "n_lignes": 100800,
+  "n_cellules": 5,
+  "periode_debut": "2026-07-28 20:21:00+00:00",
+  "periode_fin": "2026-08-11 20:20:00+00:00",
+  "duree_jours": 14.0,
+  "taux_imputation_pct": 0.0,
+  "taux_anomalie_pct": 1.2778,
+  "valeurs_nulles": 0,
+  "anomalies_contrat": [
+    "aucune"
+  ]
+}

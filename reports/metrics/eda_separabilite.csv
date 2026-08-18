@@ -1,0 +1,6 @@
+kpi,unite,moy_normal,moy_anomalie,ecart_relatif_pct,separabilite_sigma
+packet_loss,%,0.626,7.251,1058.3,28.192
+latency,ms,15.784,39.353,149.33,5.796
+jitter,ms,4.411,8.201,85.94,4.3
+throughput,Mbit/s,94.747,70.389,-25.71,1.108
+cell_load,%,64.766,69.86,7.87,0.205
