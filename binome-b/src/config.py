@@ -19,6 +19,13 @@ from dotenv import load_dotenv
 BINOME_B_DIR = Path(__file__).resolve().parent.parent
 REPO_ROOT = BINOME_B_DIR.parent
 
+# Variables d'URL relevées AVANT le chargement du .env : `load_dotenv` peuple
+# `os.environ` à partir du fichier, ce qui rendrait impossible de distinguer une
+# valeur passée explicitement au processus d'une valeur venant du .env. Or la
+# précédence voulue est : processus > .env > défaut.
+_ENV_API_BASE_URL = os.getenv("API_BASE_URL")
+_ENV_NETQOS_API_URL = os.getenv("NETQOS_API_URL")
+
 load_dotenv(REPO_ROOT / ".env")
 
 SAMPLES_DIR = BINOME_B_DIR / "data" / "samples"
@@ -37,7 +44,19 @@ for _d in (SAMPLES_DIR, MODELS_DIR, REPORTS_DIR, FIGURES_DIR, METRICS_DIR):
 # ------------------------------------------------------------------
 # Source de données
 # ------------------------------------------------------------------
-API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000/api/v1")
+# `NETQOS_API_URL` est accepté comme alias : le service `dashboard` du
+# docker-compose du Binôme A déclarait ce nom, que ce module ne lisait pas. La
+# variable était donc ignorée, le dashboard retombait sur localhost dans son
+# propre conteneur et basculait en mode dégradé — l'intégration semblait cassée
+# alors que l'API répondait. Tolérer les deux noms évite que le problème
+# réapparaisse au prochain merge.
+API_BASE_URL = (
+    _ENV_API_BASE_URL  # 1. passée explicitement au processus
+    or _ENV_NETQOS_API_URL  # 2. alias du compose du Binôme A
+    or os.getenv("API_BASE_URL")  # 3. issue du .env
+    or os.getenv("NETQOS_API_URL")
+    or "http://localhost:8000/api/v1"  # 4. défaut
+)
 
 # api   : exige l'API du Binôme A (échoue si indisponible)
 # local : force la lecture des CSV locaux

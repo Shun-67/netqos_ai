@@ -1,26 +1,38 @@
 # =====================================================================
 # NetQoS-AI — composition de services
 #
-# Livrable commun (§6.1 de la fiche de stage) : « dépôt conteneurisé,
-# démarrable en une commande ».
+# Livrable commun (§6.1 de la fiche) : « dépôt conteneurisé, démarrable en
+# une commande ».
 #
-#   docker compose up --build              # base + API + dashboard
+#   docker compose up -d --build           # base + API + dashboard
 #   docker compose --profile full up -d    # + Airflow (orchestration J21)
 #
 # ---------------------------------------------------------------------
-# ORIGINE DE CE FICHIER — À VALIDER PAR LE BINÔME A
+# RÉSOLUTION DE CONFLIT (merge main -> binome-b/ia-et-restitution)
 #
-# Ce fichier était absent du dépôt alors que les trois README et le
-# Dockerfile Airflow s'y référaient : aucune commande de démarrage
-# documentée ne fonctionnait, et l'intégration A ↔ B (jalon J21) était
-# donc intestable. Le Binôme B l'a reconstitué par lecture des
-# Dockerfile, de `sql/init.sql` et de `.env.example`, pour pouvoir
-# valider son dashboard contre l'API réelle.
+# Les deux binômes ont créé ce fichier indépendamment. Version fusionnée :
 #
-# Les services `timescaledb`, `api` et `airflow` relèvent du périmètre du
-# Binôme A : à relire et à reprendre par eux. Deux points en particulier :
-#   - le nom de la base (voir la note sur POSTGRES_DB ci-dessous) ;
-#   - le stockage des métadonnées Airflow (voir la note du service airflow).
+# Reprise de la version du Binôme A :
+#   - toute la section Airflow, nettement plus aboutie que la nôtre :
+#     service airflow-cleanup pour le .pid périmé, LocalExecutor,
+#     métadonnées en PostgreSQL, délais relevés pour la synchronisation FAB
+#     sous Docker Desktop Windows, DAGS_FOLDER et PYTHONPATH corrects ;
+#   - montage du code en volume (./binome-a:/app, ./binome-b:/app), qui
+#     évite de reconstruire l'image à chaque modification.
+#
+# Reprise de la version du Binôme B :
+#   - ports paramétrables (voir la note sur POSTGRES_HOST_PORT) ;
+#   - identifiants et nom de base lus depuis .env, que le README demande de
+#     copier depuis .env.example ;
+#   - sondes de santé sur api et dashboard, exploitées par depends_on ;
+#   - dashboard hors du profil `full` (voir la note du service).
+#
+# Correction d'un défaut d'intégration : le service dashboard déclarait
+# NETQOS_API_URL, alors que le client du Binôme B lit API_BASE_URL
+# (binome-b/src/config.py). La variable était donc ignorée, le dashboard
+# retombait sur http://localhost:8000 dans son propre conteneur, ne trouvait
+# rien, et basculait en mode dégradé : l'intégration A <-> B semblait cassée
+# alors que l'API fonctionnait.
 # =====================================================================
 
 name: netqos_ai
@@ -35,28 +47,22 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-netqos}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
-      # ATTENTION — incohérence à trancher par le Binôme A : `.env.example`
-      # propose `netqos_db`, mais `binome-a/src/db.py` retient `netqos` comme
-      # valeur par défaut. Les scripts lancés hors conteneur sans `.env`
-      # viseraient donc une base inexistante. On aligne ici sur la valeur par
-      # défaut du code (`netqos`) pour que les deux chemins concordent.
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-netqos}
       POSTGRES_DB: ${POSTGRES_DB:-netqos}
     ports:
       # Port HÔTE distinct du port conteneur : les services internes se parlent
       # toujours sur 5432, mais une instance PostgreSQL déjà installée sur la
-      # machine de développement occupe fréquemment ce port. Le surcharger avec
-      # POSTGRES_HOST_PORT évite un « port is already allocated » au démarrage.
+      # machine de développement occupe fréquemment ce port, et le démarrage
+      # échoue alors sur « port is already allocated ».
       # Ne pas réutiliser POSTGRES_PORT ici : cette variable désigne le port
       # auquel se connectent les scripts, et vaut 5432 côté réseau Docker.
       - "${POSTGRES_HOST_PORT:-5432}:5432"
     volumes:
       - timescale_data:/var/lib/postgresql/data
-      # Les scripts d'un même dossier sont exécutés par ordre alphabétique :
-      # `create_airflow_db.sql` passe donc bien avant `init.sql`, comme le
-      # précise son en-tête.
-      - ./binome-a/sql/create_airflow_db.sql:/docker-entrypoint-initdb.d/01_create_airflow_db.sql:ro
-      - ./binome-a/sql/init.sql:/docker-entrypoint-initdb.d/02_init.sql:ro
+      # Exécutés par ordre alphabétique : la base airflow est donc créée avant
+      # le schéma métier, comme l'exige l'en-tête de create_airflow_db.sql.
+      - ./binome-a/sql/create_airflow_db.sql:/docker-entrypoint-initdb.d/00_create_airflow_db.sql
+      - ./binome-a/sql/init.sql:/docker-entrypoint-initdb.d/01_init_schema.sql
     healthcheck:
       # Les autres services attendent cette sonde : sans elle, l'API démarre
       # avant que TimescaleDB n'accepte les connexions et sort en erreur.
@@ -75,17 +81,20 @@ services:
       dockerfile: Dockerfile
     container_name: netqos_api
     restart: unless-stopped
+    command: uvicorn src.api.main:app --host 0.0.0.0 --port 8000
+    environment:
+      POSTGRES_HOST: timescaledb
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER:-netqos}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-netqos}
+      POSTGRES_DB: ${POSTGRES_DB:-netqos}
+    ports:
+      - "${API_PORT:-8000}:8000"
     depends_on:
       timescaledb:
         condition: service_healthy
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-netqos}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
-      POSTGRES_DB: ${POSTGRES_DB:-netqos}
-      POSTGRES_HOST: timescaledb
-      POSTGRES_PORT: 5432
-    ports:
-      - "${API_PORT:-8000}:8000"
+    volumes:
+      - ./binome-a:/app
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')\""]
       interval: 10s
@@ -102,22 +111,25 @@ services:
       dockerfile: Dockerfile
     container_name: netqos_dashboard
     restart: unless-stopped
-    depends_on:
-      api:
-        condition: service_started
+    command: streamlit run src/dashboard/app.py --server.port 8501 --server.address 0.0.0.0
     environment:
-      # Nom de service Docker, pas localhost : le dashboard tourne dans son
-      # propre conteneur.
+      # API_BASE_URL, et non NETQOS_API_URL : c'est le nom lu par
+      # binome-b/src/config.py. Nom de service Docker et non localhost, le
+      # dashboard tournant dans son propre conteneur.
       API_BASE_URL: http://api:8000/api/v1
       # `auto` : le dashboard interroge /health et retombe sur les CSV locaux
       # si l'API ne répond pas encore. Mettre `api` pour interdire ce repli.
       NETQOS_DATA_SOURCE: ${NETQOS_DATA_SOURCE:-auto}
     ports:
       - "${DASHBOARD_PORT:-8501}:8501"
+    depends_on:
+      api:
+        condition: service_healthy
     volumes:
-      # Modèles entraînés et métriques : montés en lecture seule pour que le
-      # dashboard reflète le dernier entraînement sans reconstruire l'image.
-      - ./binome-b/src/models/saved:/app/src/models/saved:ro
+      # Code monté en volume : les modèles entraînés (src/models/saved/) et le
+      # code sont pris en compte sans reconstruction d'image.
+      - ./binome-b:/app
+      # Rapports et métriques affichés dans l'onglet « Qualité des modèles ».
       - ./reports:/reports:ro
       # Repli local : permet la démonstration même API éteinte.
       - ./binome-a/data/raw:/binome-a/data/raw:ro
@@ -127,47 +139,81 @@ services:
       timeout: 5s
       retries: 6
       start_period: 30s
+    # Volontairement HORS du profil `full` : le §6.1 de la fiche demande une
+    # plateforme « démarrable en une commande », et le jalon J21 se démontre
+    # précisément par le dashboard lisant l'API. `docker compose up -d` doit
+    # donc suffire à obtenir la chaîne complète. Airflow, lui, reste optionnel.
 
   # -------------------------------------------------------------------
   # Orchestration Airflow (Binôme A) — profil « full », jalon J21
   # -------------------------------------------------------------------
+  airflow-cleanup:
+    # Nettoie un éventuel fichier .pid périmé (laissé par un précédent
+    # crash/arrêt brutal du webserver) AVANT qu'Airflow ne démarre, pour
+    # éviter l'erreur "Already running on PID ... (stale pid file)".
+    # Solution volontairement externe au conteneur Airflow lui-même : on
+    # ne touche pas au script d'entrée officiel de l'image, qui fait bien
+    # plus que juste lancer la commande (vérifications, migrations...).
+    image: busybox
+    container_name: netqos_airflow_cleanup
+    command: sh -c "rm -f /opt/airflow/airflow-webserver.pid"
+    volumes:
+      - airflow_home:/opt/airflow
+    profiles:
+      - full
+
   airflow:
+    # Image Airflow officielle + dépendances du pipeline (pandas, sqlalchemy...)
+    # préinstallées à la construction (voir binome-a/airflow/Dockerfile) —
+    # plus rapide au démarrage que _PIP_ADDITIONAL_REQUIREMENTS, qui réinstalle
+    # à chaque redémarrage du conteneur.
+    # `standalone` initialise et lance en une seule commande la base, le
+    # scheduler et le webserver : suffisant pour un usage pédagogique.
+    # Métadonnées Airflow stockées dans TimescaleDB (base "airflow" séparée
+    # de la base métier) plutôt qu'en SQLite : plus rapide et plus robuste pour
+    # l'initialisation (SQLite s'est montré très lent sous Docker Desktop
+    # Windows pour la synchronisation des permissions au premier démarrage).
     build:
       context: ./binome-a/airflow
       dockerfile: Dockerfile
     container_name: netqos_airflow
-    profiles: ["full"]
-    restart: unless-stopped
+    command: standalone
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: >-
+        postgresql+psycopg2://${POSTGRES_USER:-netqos}:${POSTGRES_PASSWORD:-netqos}@timescaledb:5432/airflow
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/binome-a/airflow/dags
+      PYTHONPATH: /opt/airflow/binome-a
+      PYTHONUNBUFFERED: "1"   # logs affichés en temps réel (sinon sortie bufferisée, invisible pendant l'init)
+      # Le premier démarrage synchronise ~150 permissions FAB en base — sous
+      # Docker Desktop Windows, ça peut dépasser le délai de sécurité par
+      # défaut (120s) au-delà duquel Airflow tue le webserver en le croyant
+      # figé. On relève ce délai pour laisser le temps à la synchronisation
+      # de se terminer une bonne fois pour toutes (elle ne se refait plus
+      # ensuite, les démarrages suivants sont rapides).
+      AIRFLOW__WEBSERVER__WEB_SERVER_MASTER_TIMEOUT: "300"
+      AIRFLOW__WEBSERVER__WEB_SERVER_TIMEOUT: "300"
+      AIRFLOW__WEBSERVER__WORKERS: "2"   # moins de workers en concurrence pendant l'init = moins de contention CPU
+      # Connexion à TimescaleDB réutilisée par les DAGs (via src/db.py)
+      POSTGRES_HOST: timescaledb
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER:-netqos}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-netqos}
+      POSTGRES_DB: ${POSTGRES_DB:-netqos}
+    ports:
+      - "${AIRFLOW_PORT:-8080}:8080"
     depends_on:
       timescaledb:
         condition: service_healthy
-    environment:
-      # NOTE POUR LE BINÔME A — contradiction à lever : le README de
-      # `binome-a/` annonce qu'Airflow « initialise sa base SQLite interne »,
-      # alors que `sql/create_airflow_db.sql` crée une base PostgreSQL dédiée
-      # `airflow`. On câble ici la base PostgreSQL, puisque c'est ce que le
-      # script SQL prévoit — SQLite interdit d'ailleurs l'exécution parallèle
-      # des tâches. À confirmer, et à répercuter dans le README.
-      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: >-
-        postgresql+psycopg2://${POSTGRES_USER:-netqos}:${POSTGRES_PASSWORD:-changeme}@timescaledb:5432/airflow
-      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
-      AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
-      # Le DAG importe `src.preparation.*` : le dossier du Binôme A doit être
-      # sur le PYTHONPATH, comme le documente l'en-tête du DAG.
-      PYTHONPATH: /opt/airflow/binome-a
-      POSTGRES_USER: ${POSTGRES_USER:-netqos}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
-      POSTGRES_DB: ${POSTGRES_DB:-netqos}
-      POSTGRES_HOST: timescaledb
-      POSTGRES_PORT: 5432
-    ports:
-      - "${AIRFLOW_PORT:-8080}:8080"
+      airflow-cleanup:
+        condition: service_completed_successfully
     volumes:
-      - ./binome-a/airflow/dags:/opt/airflow/dags
       - ./binome-a:/opt/airflow/binome-a
-      - airflow_logs:/opt/airflow/logs
-    command: standalone
+      - airflow_home:/opt/airflow
+    profiles:
+      - full   # orchestration avancée (jalon J21) — optionnelle, voir README
 
 volumes:
   timescale_data:
-  airflow_logs:
+  airflow_home:

@@ -9,10 +9,9 @@ Usage:
 
 import sys
 import pandas as pd
-from sqlalchemy import text
 
 sys.path.append(".")
-from src.db import get_engine
+from src.db import get_engine, upsert_on_conflict
 
 VALUE_BOUNDS = {
     "throughput": (0, None),
@@ -73,7 +72,7 @@ def clean_and_prepare(since: str = None) -> pd.DataFrame:
     with engine.begin() as conn:
         clean_df[cols].to_sql(
             "clean_kpi_measurements", conn, if_exists="append", index=False,
-            method="multi", chunksize=5000
+            method=upsert_on_conflict, chunksize=5000
         )
     print(f"{len(clean_df)} lignes nettoyées écrites dans clean_kpi_measurements")
     return clean_df
