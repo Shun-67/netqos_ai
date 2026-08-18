@@ -1,17 +1,39 @@
-pandas==2.2.2
-numpy==1.26.4
-scikit-learn==1.5.0
-scipy==1.13.1
-pyod==1.1.3
-statsmodels==0.14.2
-prophet==1.1.5
-xgboost==2.0.3
-streamlit==1.35.0
-plotly==5.22.0
-requests==2.32.3
-python-dotenv==1.0.1
-jupyter==1.0.0
-notebook==7.2.0
-ipykernel==6.29.4
-matplotlib==3.9.0
-seaborn==0.13.2
+# Binôme B — IA & restitution
+#
+# Contraintes minimales (>=) plutôt que des versions figées (==) : l'ancien
+# fichier épinglait numpy==1.26.4 / pandas==2.2.2 / scikit-learn==1.5.0, pour
+# lesquels il n'existe pas de distribution compatible Python 3.13 — l'install
+# échouait sur les machines du binôme. Versions validées en commentaire.
+
+# --- Données ---
+pandas>=2.2          # validé : 2.3.0
+numpy>=2.0           # validé : 2.2.6
+scipy>=1.13          # validé : 1.15.3
+
+# --- Modèles ---
+scikit-learn>=1.6    # validé : 1.9.0 — Isolation Forest, DBSCAN, autoencodeur (MLP), scalers
+statsmodels>=0.14.4  # validé : 0.14.6 — baseline ARIMA
+xgboost>=2.1         # validé : 3.4.0  — prévision avancée
+
+# --- Restitution ---
+streamlit>=1.40      # validé : 1.61.1
+plotly>=5.22         # validé : 6.8.0
+matplotlib>=3.9      # validé : 3.10.3 — figures statiques de l'EDA et du rapport
+seaborn>=0.13        # validé : 0.13.2
+tabulate>=0.9        # validé : 0.10.0 — tableaux Markdown des rapports générés
+
+# --- Accès à l'API du Binôme A ---
+requests>=2.32
+python-dotenv>=1.0
+
+# --- Exploration ---
+jupyter>=1.0
+notebook>=7.2
+ipykernel>=6.29
+
+# Non retenus : Prophet (installable en 1.3.0 sur Python 3.13, mais inadapté à
+# un horizon de 5-30 min où la dynamique autorégressive domine la saisonnalité)
+# et TensorFlow/PyTorch pour LSTM/GRU (coût disproportionné au volume de données
+# du projet). Voir reports/rapport_evaluation_modeles.md §« Modèles écartés ».
+# L'autoencodeur est implémenté avec scikit-learn (MLPRegressor), ce qui évite
+# une dépendance à un framework de deep learning.
