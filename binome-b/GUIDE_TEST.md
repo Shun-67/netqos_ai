@@ -487,6 +487,18 @@ Contrôles pendant l'exécution :
 | Écart API ↔ CSV local | 0,0000000000 |
 | Dashboard | 6 onglets, 0 exception |
 
+> **Ces valeurs supposent des données batch uniquement.** Si le simulateur de flux
+> tourne (§3.6), il insère des lignes dans `raw_kpi_measurements` : les chiffres
+> lus via l'API dériveront alors légèrement de ceux du tableau, tant que le
+> pipeline de nettoyage n'a pas été relancé. Pour retrouver exactement les valeurs
+> de référence, travailler en `NETQOS_DATA_SOURCE=local`.
+>
+> À noter, et c'est une propriété utile à montrer en soutenance : entre un run en
+> mode API et un run en mode local, `rapport_eda.md` ne diffère que par **la ligne
+> indiquant la source**. Toutes les figures et tous les chiffres sont identiques —
+> c'est la démonstration la plus directe que les modèles sont indifférents à la
+> source de données.
+
 ---
 
 ## Défauts connus, à ne pas confondre avec des régressions

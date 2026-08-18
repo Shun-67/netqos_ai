@@ -1,6 +1,6 @@
 # Rapport d'analyse exploratoire — Binôme B
 
-**Jalon J7** · contrat d'interface v1.1 · source de données : `API Binôme A — http://localhost:8010/api/v1`
+**Jalon J7** · contrat d'interface v1.1 · source de données : `CSV local — historical_kpi.csv`
 
 Généré par `python -m src.scripts.run_eda`. Figures dans `reports/figures/eda/`.
 
