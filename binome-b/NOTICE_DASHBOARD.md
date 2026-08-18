@@ -7,7 +7,7 @@ développeur.*
 
 ## 1. À quoi sert ce tableau de bord
 
-Il répond à trois questions d'exploitation :
+Il répond à quatre questions d'exploitation :
 
 1. **Où en est le réseau maintenant ?** État de chaque cellule : bon, dégradé ou
    critique.
@@ -15,6 +15,8 @@ Il répond à trois questions d'exploitation :
    atypiques, y compris ceux qui ne franchissent aucun seuil.
 3. **Que va-t-il se passer dans 5, 15 ou 30 minutes ?** État annoncé, pour agir
    avant que les utilisateurs ne soient affectés.
+4. **Que se passe-t-il à la seconde près ?** Flux quasi temps réel, rafraîchi à la
+   cadence d'émission de l'API.
 
 Le tableau de bord **observe et prévoit ; il n'agit pas** sur le réseau — la
 reconfiguration automatique est hors périmètre du projet (§3.4 de la fiche).
@@ -101,7 +103,7 @@ endroit. À laisser décochée pour juger le tableau de bord en conditions réel
 
 ---
 
-## 5. Les cinq onglets
+## 5. Les six onglets
 
 ### 5.1 Vue d'ensemble — *à consulter en premier*
 
@@ -123,7 +125,44 @@ Dessous, les alertes d'anomalie des 6 dernières heures, agrégées par cellule
 > au Binôme A. Pour juger d'une dégradation réelle, se fier en priorité aux
 > **alertes d'anomalie** plutôt qu'à la couleur.
 
-### 5.2 KPI & anomalies
+### 5.2 Temps réel
+
+Affiche le **flux quasi temps réel** émis par le simulateur du Binôme A
+(`GET /kpi/stream`), à distinguer des autres onglets qui montrent l'historique
+nettoyé.
+
+En haut, quatre indicateurs :
+
+| Indicateur | À quoi il sert |
+|---|---|
+| **Dernière mesure reçue** | l'âge de la donnée la plus récente. C'est le seul moyen de savoir si le flux est vivant : au-delà de quatre cadences d'émission, la mention passe à « flux en retard ». |
+| **État instantané** | état QoS calculé sur la mesure brute la plus récente. |
+| **Points reçus** | nombre de mesures affichées (réglable de 20 à 500). |
+| **Cadence déclarée** | fréquence d'émission annoncée par `GET /kpi/stream/info`. |
+
+Puis les cinq valeurs courantes avec leur variation depuis la mesure précédente,
+et les cinq courbes du flux avec les seuils du contrat en surimpression.
+
+**Rafraîchissement automatique** : l'interrupteur en haut à gauche réexécute la
+vue à la cadence d'émission déclarée par l'API (5 s). Seul ce bloc est rafraîchi,
+pas toute la page — recharger l'historique complet et rescorer les modèles toutes
+les 5 secondes rendrait le tableau de bord inutilisable.
+
+**Si l'onglet indique « Aucune mesure de flux reçue »**, c'est que le simulateur du
+Binôme A ne tourne pas. Le démarrer dans un autre terminal :
+
+```bash
+docker exec -d netqos_api python -m src.ingestion.stream_simulator     --cells 5 --interval-seconds 5
+```
+
+**Pourquoi il n'y a pas de score d'anomalie dans cet onglet.** Les détecteurs
+consomment les 43 caractéristiques calculées par le pipeline du Binôme A, qui se
+rafraîchit toutes les 15 minutes via Airflow. La détection d'anomalies est donc
+bornée par la cadence du pipeline, non par celle du tableau de bord. L'état QoS,
+lui, se calcule directement sur les KPI bruts : il est réellement instantané.
+C'est une limite d'architecture, pas un oubli.
+
+### 5.3 KPI & anomalies
 
 Six graphiques synchronisés : les cinq KPI, puis le score d'atypicité.
 
@@ -140,7 +179,7 @@ Si le détecteur sélectionné est l'**autoencodeur**, un tableau supplémentair
 liste les features ayant le plus contribué à chaque alerte — utile pour motiver
 un diagnostic. Les autres détecteurs ne fournissent pas cette décomposition.
 
-### 5.3 Prévision
+### 5.4 Prévision
 
 Trajectoire observée (noir) et prévisions à +5, +15 et +30 min (pointillés
 colorés). **Les prévisions sont décalées pour s'aligner sur l'instant qu'elles
@@ -155,7 +194,7 @@ Un tableau rappelle la fiabilité mesurée de cette annonce (environ 83 %
 d'exactitude d'état, et 13–15 % de dégradations critiques manquées) — à garder en
 tête avant d'agir sur la seule base d'une prévision.
 
-### 5.4 Qualité des modèles
+### 5.5 Qualité des modèles
 
 Métriques d'évaluation, pour que l'exploitant sache quelle confiance accorder à ce
 qu'il lit. Deux lectures utiles :
@@ -167,7 +206,7 @@ qu'il lit. Deux lectures utiles :
   que « la valeur restera ce qu'elle est ». Le gain croît avec l'horizon, ce qui
   est le comportement attendu.
 
-### 5.5 Intégration
+### 5.6 Intégration
 
 Onglet de diagnostic, à ouvrir quand quelque chose semble anormal : source de
 données active, URL de l'API, mode demandé, modèles chargés, liste des endpoints
@@ -184,6 +223,7 @@ consommés.
 | Onglet Prévision vide | modèle de prévision absent | `python -m src.scripts.train_forecast` |
 | Onglet Qualité vide | métriques absentes de `reports/metrics/` | relancer les deux scripts d'entraînement |
 | « Aucune donnée sur la fenêtre » | fenêtre plus récente que les données | élargir la fenêtre d'observation |
+| Onglet Temps réel : « Aucune mesure de flux reçue » | le simulateur de flux du Binôme A ne tourne pas | `docker exec -d netqos_api python -m src.ingestion.stream_simulator --cells 5 --interval-seconds 5` |
 | Toutes les cellules en rouge | seuils v1.1 trop stricts (comportement connu) | se fier aux alertes d'anomalie ; révision v1.2 demandée au Binôme A |
 | Page lente au premier chargement | calcul des features sur tout l'historique | résultats mis en cache 60 s ; les chargements suivants sont immédiats |
 

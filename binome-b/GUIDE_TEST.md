@@ -168,7 +168,8 @@ print('metriques  :', len(at.metric))
 "
 ```
 
-**Attendu :** `exceptions : 0` · `onglets : 5` · `metriques : 8`.
+**Attendu :** `exceptions : 0` · `onglets : 6` · `metriques : 8` (hors flux : sans
+simulateur actif, l'onglet Temps réel n'affiche aucun indicateur).
 
 ### 2.2 Test visuel
 
@@ -298,7 +299,61 @@ NETQOS_DATA_SOURCE=api API_BASE_URL=http://localhost:8010/api/v1 python -m src.s
 > d'horodatage de `/eval/labels` a été retiré — voir §2 des réserves dans
 > `reports/rapport_eda.md`.
 
-### 3.6 Arrêter
+### 3.6 L'onglet Temps réel affiche un flux vivant
+
+Le flux ne provient pas de l'historique : il faut démarrer le simulateur du
+Binôme A, sinon l'onglet reste vide (avec un message expliquant quoi lancer).
+
+```bash
+docker exec -d netqos_api python -m src.ingestion.stream_simulator \
+    --cells 5 --interval-seconds 5
+
+sleep 20
+curl -s "http://localhost:8010/api/v1/kpi/stream?cell_id=cell_001&limit=3" \
+  | python -c "import json,sys; d=json.load(sys.stdin); print(len(d['data']), 'lignes')"
+```
+
+**Attendu :** `3 lignes`, avec des horodatages espacés de 5 secondes.
+
+Puis dans le dashboard, onglet **Temps réel** :
+
+1. l'indicateur **Dernière mesure reçue** doit afficher un âge de quelques
+   secondes et la mention **« flux actif »** ;
+2. activer **Rafraîchissement automatique** → les valeurs et les courbes doivent
+   se mettre à jour toutes les 5 s **sans rechargement de la page** ;
+3. couper le simulateur, puis attendre une vingtaine de secondes : la mention doit
+   basculer sur **« flux en retard »**.
+
+   ```bash
+   docker compose restart api      # arrête le simulateur lancé en -d
+   ```
+
+   `pkill` n'est pas disponible dans l'image (`python:3.11-slim` ne l'embarque
+   pas) ; redémarrer le conteneur est le moyen le plus simple d'arrêter un
+   simulateur lancé en arrière-plan.
+
+Le point 3 est le plus instructif : il vérifie que le tableau de bord ne fait pas
+passer des données périmées pour du temps réel.
+
+Vérification automatique équivalente, depuis l'hôte :
+
+```bash
+cd binome-b
+NETQOS_DATA_SOURCE=api API_BASE_URL=http://localhost:8010/api/v1 python -c "
+import sys; sys.path.insert(0,'.')
+from streamlit.testing.v1 import AppTest
+at = AppTest.from_file('src/dashboard/app.py', default_timeout=900)
+at.run()
+print('exceptions :', len(at.exception), '| onglets :', len(at.tabs))
+for m in at.metric:
+    if 'mesure' in str(m.label) or 'Cadence' in str(m.label): print(f'  {m.label} = {m.value} ({m.delta})')
+"
+```
+
+**Attendu :** `exceptions : 0 | onglets : 6`, et
+`Dernière mesure reçue = il y a N s (flux actif)` avec N de quelques secondes.
+
+### 3.7 Arrêter
 
 ```bash
 cd .. && docker compose stop            # conserve la base
@@ -430,7 +485,7 @@ Contrôles pendant l'exécution :
 | XGBoost — gain MAE (5/15/30 min) | +9,8 % / +14,3 % / +21,2 % |
 | Exactitude de l'état QoS annoncé | ≈ 83 % |
 | Écart API ↔ CSV local | 0,0000000000 |
-| Dashboard | 5 onglets, 0 exception |
+| Dashboard | 6 onglets, 0 exception |
 
 ---
 
