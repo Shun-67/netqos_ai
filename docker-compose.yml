@@ -1,0 +1,125 @@
+services:
+  timescaledb:
+    image: timescale/timescaledb:latest-pg16
+    container_name: netqos_timescaledb
+    environment:
+      POSTGRES_USER: netqos
+      POSTGRES_PASSWORD: netqos
+      POSTGRES_DB: netqos
+    ports:
+      - "5432:5432"
+    volumes:
+      - timescale_data:/var/lib/postgresql/data
+      - ./binome-a/sql/create_airflow_db.sql:/docker-entrypoint-initdb.d/00_create_airflow_db.sql
+      - ./binome-a/sql/init.sql:/docker-entrypoint-initdb.d/01_init_schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U netqos"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: ./binome-a
+      dockerfile: Dockerfile
+    container_name: netqos_api
+    command: uvicorn src.api.main:app --host 0.0.0.0 --port 8000
+    environment:
+      POSTGRES_HOST: timescaledb
+      POSTGRES_USER: netqos
+      POSTGRES_PASSWORD: netqos
+      POSTGRES_DB: netqos
+    ports:
+      - "8000:8000"
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+    volumes:
+      - ./binome-a:/app
+
+  dashboard:
+    build:
+      context: ./binome-b
+      dockerfile: Dockerfile
+    container_name: netqos_dashboard
+    command: streamlit run src/dashboard/app.py --server.port 8501 --server.address 0.0.0.0
+    environment:
+      NETQOS_API_URL: http://api:8000/api/v1
+    ports:
+      - "8501:8501"
+    depends_on:
+      - api
+    volumes:
+      - ./binome-b:/app
+    profiles:
+      - full   # `docker compose --profile full up` pour inclure le dashboard
+              # (`docker compose up` seul ne lance que timescaledb + api)
+
+  airflow-cleanup:
+    # Nettoie un éventuel fichier .pid périmé (laissé par un précédent
+    # crash/arrêt brutal du webserver) AVANT qu'Airflow ne démarre, pour
+    # éviter l'erreur "Already running on PID ... (stale pid file)".
+    # Solution volontairement externe au conteneur Airflow lui-même : on
+    # ne touche pas au script d'entrée officiel de l'image, qui fait bien
+    # plus que juste lancer la commande (vérifications, migrations...).
+    image: busybox
+    container_name: netqos_airflow_cleanup
+    command: sh -c "rm -f /opt/airflow/airflow-webserver.pid"
+    volumes:
+      - airflow_home:/opt/airflow
+    profiles:
+      - full
+
+  airflow:
+    # Image Airflow officielle + dépendances du pipeline (pandas, sqlalchemy...)
+    # préinstallées à la construction (voir binome-a/airflow/Dockerfile) —
+    # plus rapide au démarrage que _PIP_ADDITIONAL_REQUIREMENTS, qui réinstalle
+    # à chaque redémarrage du conteneur.
+    # `standalone` initialise et lance en une seule commande la base, le
+    # scheduler et le webserver : suffisant pour un usage pédagogique.
+    # Métadonnées Airflow stockées dans TimescaleDB (base "airflow" séparée
+    # de "netqos") plutôt qu'en SQLite : plus rapide et plus robuste pour
+    # l'initialisation (SQLite s'est montré très lent sous Docker Desktop
+    # Windows pour la synchronisation des permissions au premier démarrage).
+    build:
+      context: ./binome-a/airflow
+      dockerfile: Dockerfile
+    container_name: netqos_airflow
+    command: standalone
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://netqos:netqos@timescaledb:5432/airflow
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/binome-a/airflow/dags
+      PYTHONPATH: /opt/airflow/binome-a
+      PYTHONUNBUFFERED: "1"   # logs affichés en temps réel (sinon sortie bufferisée, invisible pendant l'init)
+      # Le premier démarrage synchronise ~150 permissions FAB en base — sous
+      # Docker Desktop Windows, ça peut dépasser le délai de sécurité par
+      # défaut (120s) au-delà duquel Airflow tue le webserver en le croyant
+      # figé. On relève ce délai pour laisser le temps à la synchronisation
+      # de se terminer une bonne fois pour toutes (elle ne se refait plus
+      # ensuite, les démarrages suivants sont rapides).
+      AIRFLOW__WEBSERVER__WEB_SERVER_MASTER_TIMEOUT: "300"
+      AIRFLOW__WEBSERVER__WEB_SERVER_TIMEOUT: "300"
+      AIRFLOW__WEBSERVER__WORKERS: "2"   # moins de workers en concurrence pendant l'init = moins de contention CPU
+      # Connexion à TimescaleDB (base "netqos") réutilisée par les DAGs (via src/db.py)
+      POSTGRES_HOST: timescaledb
+      POSTGRES_USER: netqos
+      POSTGRES_PASSWORD: netqos
+      POSTGRES_DB: netqos
+    ports:
+      - "8080:8080"
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+      airflow-cleanup:
+        condition: service_completed_successfully
+    volumes:
+      - ./binome-a:/opt/airflow/binome-a
+      - airflow_home:/opt/airflow
+    profiles:
+      - full   # orchestration avancée (jalon J21) — optionnelle, voir README
+
+volumes:
+  timescale_data:
+  airflow_home:
