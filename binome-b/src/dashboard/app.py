@@ -7,11 +7,13 @@ sur les CSV locaux tant que l'API n'est pas démarrée), applique les modèles
 entraînés, et restitue :
 
   1. **Vue d'ensemble** — état QoS courant de chaque cellule, alertes actives ;
-  2. **KPI & anomalies** — séries temporelles, score d'atypicité, alertes ;
-  3. **Prévision** — trajectoire prévue à 5/15/30 min et état QoS annoncé ;
-  4. **Qualité des modèles** — métriques d'évaluation, pour que l'exploitant
+  2. **Temps réel** — flux quasi temps réel du simulateur, avec auto-rafraîchissement
+     à la cadence déclarée par l'API ;
+  3. **KPI & anomalies** — séries temporelles, score d'atypicité, alertes ;
+  4. **Prévision** — trajectoire prévue à 5/15/30 min et état QoS annoncé ;
+  5. **Qualité des modèles** — métriques d'évaluation, pour que l'exploitant
      sache quel degré de confiance accorder à ce qu'il lit ;
-  5. **Diagnostic d'intégration** — source de données active, version du contrat.
+  6. **Diagnostic d'intégration** — source de données active, version du contrat.
 
 Lancement (depuis binome-b/) :
     streamlit run src/dashboard/app.py
@@ -228,7 +230,155 @@ def tab_overview(history: pd.DataFrame, features: pd.DataFrame, thresholds: dict
 
 
 # ==================================================================
-# Onglet 2 — KPI & anomalies
+# Onglet 2 — Flux quasi temps réel
+# ==================================================================
+@st.cache_data(ttl=300, show_spinner=False)
+def load_stream_info() -> dict:
+    """Fréquence d'émission déclarée par l'API (mise en cache : elle ne varie pas)."""
+    return loader.get_stream_info()
+
+
+def _stream_panel(cell_id: str, thresholds: dict, limit: int) -> None:
+    """Corps rafraîchi de l'onglet temps réel.
+
+    Isolé dans une fonction pour pouvoir être encapsulé dans un fragment
+    Streamlit : seul ce bloc est réexécuté à chaque tick, et non toute la page —
+    recharger l'historique complet et rescorer les modèles toutes les 5 secondes
+    serait inutilisable.
+    """
+    stream = loader.load_stream(cell_id=cell_id, limit=limit)
+
+    if stream.empty:
+        if loader.active_source() != "api":
+            st.warning(
+                "**Flux indisponible en mode local.** Le flux quasi temps réel n'a "
+                "pas d'équivalent hors ligne : il faut l'API du Binôme A. Voir "
+                "l'onglet « Intégration »."
+            )
+        else:
+            st.info(
+                "**Aucune mesure de flux reçue.** L'API répond, mais aucune ligne "
+                "n'a `source = 'stream'` : le simulateur de flux du Binôme A ne "
+                "tourne pas. Le démarrer dans un autre terminal :\n\n"
+                "```bash\n"
+                "docker exec -d netqos_api python -m src.ingestion.stream_simulator \\\n"
+                "    --cells 5 --interval-seconds 5\n"
+                "```\n\n"
+                "Les autres onglets restent alimentés par l'historique nettoyé."
+            )
+        return
+
+    stream = stream.sort_values("ts")
+    latest = stream.iloc[-1]
+
+    # --- Fraîcheur de la donnée : le seul indicateur qui distingue un flux
+    # --- réellement vivant d'un affichage figé.
+    age_seconds = (pd.Timestamp.now(tz="UTC") - latest["ts"]).total_seconds()
+    interval = int(load_stream_info().get("emission_interval_seconds", 5))
+
+    columns = st.columns([1.2, 1, 1, 1])
+    columns[0].metric(
+        "Dernière mesure reçue",
+        f"il y a {age_seconds:.0f} s",
+        delta=("flux actif" if age_seconds < 4 * interval else "flux en retard"),
+        delta_color=("normal" if age_seconds < 4 * interval else "inverse"),
+    )
+
+    classified = qos_state.classify_frame(stream, thresholds)
+    state = str(classified["qos_state"].iloc[-1])
+    icon = {"bon": "🟢", "dégradé": "🟠", "critique": "🔴"}[state]
+    columns[1].metric(f"{icon} État instantané", state.capitalize())
+    columns[2].metric("Points reçus", f"{len(stream)}")
+    columns[3].metric("Cadence déclarée", f"{interval} s")
+
+    # --- Valeurs courantes des 5 KPI ---
+    kpi_columns = st.columns(len(KPIS))
+    for column, kpi in zip(kpi_columns, KPIS):
+        previous = stream[kpi].iloc[-2] if len(stream) > 1 else latest[kpi]
+        column.metric(
+            f"{kpi} ({KPI_UNITS[kpi]})",
+            f"{latest[kpi]:.2f}",
+            delta=f"{latest[kpi] - previous:+.2f}",
+            delta_color="off",
+        )
+
+    # --- Courbes du flux, seuils du contrat en surimpression ---
+    figure = make_subplots(
+        rows=len(KPIS), cols=1, shared_xaxes=True, vertical_spacing=0.03,
+        subplot_titles=[f"{k} ({KPI_UNITS[k]})" for k in KPIS],
+    )
+    for index, kpi in enumerate(KPIS, start=1):
+        figure.add_trace(
+            go.Scatter(
+                x=stream["ts"], y=stream[kpi], mode="lines+markers",
+                line=dict(width=1.3, color="#2c6fb5"), marker=dict(size=3),
+                name=kpi, showlegend=False,
+            ),
+            row=index, col=1,
+        )
+        bounds = thresholds.get(kpi, {})
+        for key, colour in (("good_max", "#e8a33d"), ("degraded_max", "#d1495b"),
+                            ("good_min", "#e8a33d"), ("degraded_min", "#d1495b")):
+            if key in bounds:
+                figure.add_hline(
+                    y=bounds[key], line=dict(color=colour, width=1, dash="dash"),
+                    row=index, col=1,
+                )
+    figure.update_layout(
+        height=150 * len(KPIS), margin=dict(t=40, b=30, l=10, r=10), hovermode="x unified"
+    )
+    st.plotly_chart(figure, width="stretch", key=f"stream_{cell_id}_{latest['ts']}")
+
+    st.caption(
+        f"Source : `GET /kpi/stream` — mesures **brutes** (`source = 'stream'`), "
+        f"non nettoyées et non rééchantillonnées, contrairement aux autres onglets."
+    )
+
+
+def tab_realtime(thresholds: dict, options: dict) -> None:
+    st.subheader("Flux quasi temps réel")
+
+    info = load_stream_info()
+    interval = int(info.get("emission_interval_seconds", 5))
+
+    control_columns = st.columns([1, 1, 2])
+    auto = control_columns[0].toggle(
+        "Rafraîchissement automatique",
+        value=False,
+        help=(
+            f"Réexécute cette vue toutes les {interval} s, à la cadence d'émission "
+            "déclarée par l'API. Seul ce bloc est rafraîchi, pas toute la page."
+        ),
+    )
+    limit = control_columns[1].number_input(
+        "Points affichés", min_value=20, max_value=500, value=100, step=20
+    )
+
+    if info:
+        control_columns[2].caption(
+            f"Cadence d'émission déclarée : **{interval} s** · "
+            f"type de connexion : `{info.get('connection_type', 'inconnu')}` · "
+            f"polling recommandé : {info.get('recommended_polling_interval_seconds', interval)} s"
+        )
+
+    # `run_every=None` : le bloc s'affiche une fois, sans réexécution périodique.
+    panel = st.fragment(run_every=f"{interval}s" if auto else None)(_stream_panel)
+    panel(options["cell_id"], thresholds, int(limit))
+
+    st.info(
+        "**Pourquoi cet onglet n'affiche pas de score d'anomalie.** Les détecteurs "
+        "consomment les 43 features du contrat, produites par le pipeline du "
+        "Binôme A (`clean_prepare` puis `build_features`) et rafraîchies au rythme "
+        "du DAG Airflow, soit toutes les 15 minutes. La détection d'anomalies est "
+        "donc bornée par la cadence du pipeline, non par celle du dashboard. "
+        "L'état QoS, lui, se calcule directement sur les KPI bruts : il est "
+        "réellement instantané.",
+        icon="ℹ️",
+    )
+
+
+# ==================================================================
+# Onglet 3 — KPI & anomalies
 # ==================================================================
 def tab_kpi(
     history: pd.DataFrame,
@@ -564,17 +714,26 @@ def main() -> None:
         )
 
     tabs = st.tabs(
-        ["Vue d'ensemble", "KPI & anomalies", "Prévision", "Qualité des modèles", "Intégration"]
+        [
+            "Vue d'ensemble",
+            "Temps réel",
+            "KPI & anomalies",
+            "Prévision",
+            "Qualité des modèles",
+            "Intégration",
+        ]
     )
     with tabs[0]:
         tab_overview(history, features, thresholds, options, detectors)
     with tabs[1]:
-        tab_kpi(history, features, thresholds, options, detectors)
+        tab_realtime(thresholds, options)
     with tabs[2]:
-        tab_forecast(history, features, thresholds, options, forecaster)
+        tab_kpi(history, features, thresholds, options, detectors)
     with tabs[3]:
-        tab_quality()
+        tab_forecast(history, features, thresholds, options, forecaster)
     with tabs[4]:
+        tab_quality()
+    with tabs[5]:
         tab_integration(source, detectors, forecaster)
 
 

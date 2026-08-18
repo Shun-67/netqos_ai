@@ -163,10 +163,30 @@ def load_latest(cell_id: Optional[str] = None, n: int = 100) -> pd.DataFrame:
 
 
 def load_stream(cell_id: Optional[str] = None, limit: int = 50) -> pd.DataFrame:
-    """Flux quasi temps réel. Indisponible en local (retourne un DataFrame vide)."""
+    """Flux quasi temps réel (GET /kpi/stream).
+
+    Ne sert que les mesures dont `source = 'stream'`, c'est-à-dire celles
+    produites par le simulateur de flux du Binôme A. Retourne un DataFrame vide
+    si le simulateur ne tourne pas, ou en mode local — le flux n'a pas
+    d'équivalent hors ligne, par nature.
+    """
     if active_source() == "api":
         return _client_instance().get_stream(cell_id, limit)
     return pd.DataFrame()
+
+
+def get_stream_info() -> dict:
+    """Fréquence d'émission et modalités de polling (GET /kpi/stream/info).
+
+    Retourne un dictionnaire vide si l'API est indisponible : le dashboard se
+    rabat alors sur un intervalle de rafraîchissement par défaut.
+    """
+    if active_source() != "api":
+        return {}
+    try:
+        return _client_instance().get_stream_info()
+    except (ApiUnavailable, KeyError):
+        return {}
 
 
 # ==================================================================

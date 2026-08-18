@@ -112,7 +112,7 @@ binome-b/
     │   ├── train_forecast.py
     │   └── make_report.py
     └── dashboard/
-        └── app.py                  # Streamlit, 5 onglets
+        └── app.py                  # Streamlit, 6 onglets
 ```
 
 Les livrables générés vont dans `reports/` à la racine du dépôt (livrables

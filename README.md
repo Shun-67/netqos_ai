@@ -106,5 +106,5 @@ Deux résultats méthodologiques notables, documentés dans le rapport :
 |-------|----------|------|
 | J7  | Contrat d'interface figé + EDA | contrat v1.1 figé · EDA Binôme B faite (`reports/rapport_eda.md`) |
 | J14 | Baselines anomalie et prévision | pipeline A bout-en-bout · 4 baselines anomalie + 4 baselines prévision évaluées |
-| J21 | Modèles avancés + dashboard | Airflow (A) · autoencodeur et XGBoost (B) · dashboard 5 onglets · **intégration A↔B vérifiée sur la stack Docker** |
+| J21 | Modèles avancés + dashboard | Airflow (A) · autoencodeur et XGBoost (B) · dashboard 6 onglets dont un temps réel · **intégration A↔B vérifiée sur la stack Docker** |
 | J30 | Soutenance finale | rapport d'évaluation et notice du dashboard produits · schéma d'architecture à produire |
