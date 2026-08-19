@@ -1,0 +1,43 @@
+{
+  "horizons": [
+    5,
+    15,
+    30
+  ],
+  "meilleur_modele_par_horizon": {
+    "5": {
+      "modele": "xgboost",
+      "gain_mae_vs_persistance_pct": 9.678
+    },
+    "15": {
+      "modele": "xgboost",
+      "gain_mae_vs_persistance_pct": 14.401999999999997
+    },
+    "30": {
+      "modele": "xgboost",
+      "gain_mae_vs_persistance_pct": 20.478
+    }
+  },
+  "etat_qos_prevu": [
+    {
+      "horizon_min": 5,
+      "exactitude_etat": 0.8239,
+      "part_critiques_manques": 0.1438,
+      "n": 19820
+    },
+    {
+      "horizon_min": 15,
+      "exactitude_etat": 0.8207,
+      "part_critiques_manques": 0.1479,
+      "n": 19820
+    },
+    {
+      "horizon_min": 30,
+      "exactitude_etat": 0.8188,
+      "part_critiques_manques": 0.1521,
+      "n": 19820
+    }
+  ],
+  "arima_evalue": true,
+  "origines_communes": 600
+}

@@ -1,0 +1,9 @@
+detecteur,point_de_fonctionnement,seuil,precision,rappel,f1,vp,fp,vn,fn,n,taux_alerte_pct,prevalence_pct,specificite,pr_auc,roc_auc,episodes_reels,episodes_detectes,rappel_episode,delai_median_min,episodes_fausse_alerte,fausses_alertes_par_heure
+seuils_contrat,exploitation (non supervisé),2.0,0.0263,0.7033,0.0507,211,7813,11737,89,19850,40.4232,1.5113,0.6004,0.0232,0.6518,9,9,1.0,6.5,183,0.5529
+seuils_contrat,F1-optimal (choisi sur validation),2.0,0.0263,0.7033,0.0507,211,7813,11737,89,19850,40.4232,1.5113,0.6004,0.0232,0.6518,9,9,1.0,6.5,183,0.5529
+isolation_forest,exploitation (non supervisé),0.54453,0.6215,0.6567,0.6386,197,120,19430,103,19850,1.597,1.5113,0.9939,0.6122,0.9598,9,9,1.0,13.5,6,0.0181
+isolation_forest,F1-optimal (choisi sur validation),0.56571,0.7261,0.5567,0.6302,167,63,19487,133,19850,1.1587,1.5113,0.9968,0.6122,0.9598,9,9,1.0,16.0,6,0.0181
+dbscan,exploitation (non supervisé),11.17781,0.2772,0.1867,0.2231,56,146,19404,244,19850,1.0176,1.5113,0.9925,0.3909,0.9559,9,4,0.4444,11.5,6,0.0181
+dbscan,F1-optimal (choisi sur validation),3.57954,0.5062,0.8133,0.624,244,238,19312,56,19850,2.4282,1.5113,0.9878,0.3909,0.9559,9,9,1.0,5.0,15,0.0453
+autoencodeur,exploitation (non supervisé),14.86899,0.3826,0.3967,0.3895,119,192,19358,181,19850,1.5668,1.5113,0.9902,0.3628,0.9438,9,8,0.8889,9.0,1,0.003
+autoencodeur,F1-optimal (choisi sur validation),4.68391,0.501,0.8133,0.6201,244,243,19307,56,19850,2.4534,1.5113,0.9876,0.3628,0.9438,9,9,1.0,6.5,1,0.003
