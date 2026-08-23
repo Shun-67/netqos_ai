@@ -65,6 +65,11 @@ DOCUMENTS_BINOME_B = {
 
 AUTEUR = "Binôme B — Intelligence artificielle & restitution"
 
+# Gabarit de style, construit par `src/scripts/build_docx_template.py` à partir
+# des conventions relevées dans le contrat d'interface du Binôme A. S'il est
+# absent, l'export se fait avec le style par défaut de pandoc.
+GABARIT = Path(__file__).resolve().parent.parent.parent / "assets" / "gabarit_netqos.docx"
+
 
 def verifier_pandoc() -> str:
     """Retourne le chemin de pandoc, ou interrompt avec un message utile."""
@@ -102,6 +107,8 @@ def exporter(
         "--metadata",
         "lang=fr-FR",
     ]
+    if GABARIT.exists():
+        commande += [f"--reference-doc={GABARIT}"]
     if avec_toc:
         commande += ["--toc", "--toc-depth=3"]
 
