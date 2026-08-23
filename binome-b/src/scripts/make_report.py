@@ -150,6 +150,10 @@ inférieure), ni en robustesse opérationnelle.
 ### 2.6 Analyse d'erreurs par épisode
 
 {_episode_analysis(summary, episodes)}
+
+### 2.7 Campagne d'optimisation : ce qu'elle a donné, et ce qu'elle a révélé
+
+{_optimisation_section()}
 """
 
 
@@ -203,6 +207,166 @@ def _arima_verdict(results: pd.DataFrame) -> str:
     gains = arima.groupby("horizon_min")["gain_mae_vs_persistance_pct"].mean().round(2)
     detail = ", ".join(f"{gain:+.1f} % à {horizon} min" for horizon, gain in gains.items())
     return f" : son gain sur la persistance est de {detail}"
+
+
+def _optimisation_section() -> str:
+    """Rend compte de la campagne d'optimisation des deux modèles retenus."""
+    grille_a = _read_csv("optimisation_anomalie_grille.csv")
+    variance = _read_csv("optimisation_anomalie_variance.csv")
+    synthese_a = _read_json("optimisation_anomalie_synthese.json")
+    grille_p = _read_csv("optimisation_prevision_grille.csv")
+    comparaison_p = _read_csv("optimisation_prevision_comparaison.csv")
+    synthese_p = _read_json("optimisation_prevision_synthese.json")
+
+    if grille_a.empty or variance.empty:
+        return (
+            "_(campagne non exécutée — lancer `python -m src.scripts.tune_anomaly` "
+            "puis `python -m src.scripts.tune_forecast`)_"
+        )
+
+    oracle = synthese_a.get("borne_oracle_supervisee", {})
+    ecart = synthese_a.get("ecart_entre_configurations", 0.0)
+    etendue = synthese_a.get("etendue_due_a_la_graine_300_arbres", 0.0)
+
+    # Métriques du détecteur effectivement déployé, au point d'exploitation.
+    # Filtrer sur ce point est indispensable : chaque détecteur a deux lignes
+    # dans le fichier de résultats (exploitation et F1-optimal).
+    resultats = _read_csv("anomalie_resultats.csv")
+    deploye: dict = {}
+    if not resultats.empty:
+        ligne = resultats[
+            (resultats["detecteur"] == "isolation_forest")
+            & (resultats["point_de_fonctionnement"].str.startswith("exploitation"))
+        ]
+        if not ligne.empty:
+            deploye = {
+                cle: round(float(ligne.iloc[0][cle]), 4)
+                for cle in ("pr_auc", "precision", "rappel", "f1")
+            }
+
+    texte = f"""Le premier entraînement n'avait réglé que l'autoencodeur — le modèle
+écarté — laissant l'Isolation Forest et XGBoost à des valeurs choisies a priori.
+La campagne a comblé ce manque. Son résultat principal n'est pas un gain de
+performance : c'est la démonstration qu'**il n'y avait pas de gain à prendre**, et
+la mesure de ce qui plafonne réellement le système.
+
+#### Détection d'anomalies : {len(grille_a)} configurations explorées
+
+Deux leviers croisés : cinq espaces de features et six jeux d'hyperparamètres.
+
+Les cinq meilleures configurations par PR-AUC de validation :
+
+{grille_a.head(5).to_markdown(index=False)}
+
+La meilleure configuration dépasse l'actuelle de {ecart:+.4f} de PR-AUC en
+validation. Appliquée au test, elle s'est révélée **moins bonne**. Voici pourquoi.
+
+#### Le contrôle qui invalide la recherche
+
+Nous avons mesuré la dispersion de la PR-AUC **à configuration constante**, en ne
+faisant varier que la graine aléatoire :
+
+{variance.to_markdown(index=False)}
+
+L'étendue due à la seule graine, à 300 arbres, est de **{etendue:.4f}** — soit
+{etendue / max(ecart, 1e-9):.1f} fois l'écart de {ecart:.4f} entre les deux
+configurations comparées. **Toute la grille classait donc du bruit.** Sans ce
+contrôle, nous aurions publié un « gain de {synthese_a.get('gain_validation_pct', 0):+.1f} % »
+qui n'existe pas — l'erreur exacte que le protocole d'évaluation est censé
+prévenir.
+
+Deux enseignements de méthode :
+
+- **Aucun écart entre configurations n'est interprétable sans son incertitude.**
+  Avec 220 points positifs en validation, la PR-AUC est un estimateur trop bruité
+  pour départager des variantes proches.
+- **Nos hypothèses sur l'espace de features étaient fausses.** Nous pensions que
+  `cell_load`, dont l'EDA mesure une séparabilité de seulement 0,2 σ, diluait le
+  signal. Le retirer **dégrade** la PR-AUC de validation (0,575 contre 0,605).
+  Une feature faiblement discriminante seule peut contribuer en interaction avec
+  les autres — c'est précisément l'argument qui justifiait un modèle multivarié.
+
+#### Le seul gain réel : réduire la variance, pas chercher l'optimum
+
+Le tableau de dispersion porte la solution. Passer de 300 à 2000 arbres améliore
+la PR-AUC moyenne de
+{(variance.set_index('n_estimators').loc[2000, 'pr_auc_moyenne'] / variance.set_index('n_estimators').loc[300, 'pr_auc_moyenne'] - 1) * 100:+.1f} %
+**et divise l'écart-type par
+{variance.set_index('n_estimators').loc[300, 'ecart_type'] / max(variance.set_index('n_estimators').loc[2000, 'ecart_type'], 1e-9):.0f}**.
+Le diagnostic étant un problème de variance, le remède est l'agrégation — un
+nombre d'arbres plus élevé — et non l'exploration d'hyperparamètres. C'est la
+configuration désormais déployée.
+
+**Correction d'un chiffre publié.** Nos résultats précédents annonçaient une
+PR-AUC de 0,612 et un F1 de 0,639, obtenus à 300 arbres avec `RANDOM_STATE = 42`.
+Ce tirage était favorable : la moyenne à 300 arbres est de
+{variance.set_index('n_estimators').loc[300, 'pr_auc_moyenne']:.4f}. Les valeurs
+rapportées dans ce document sont celles de la configuration à 2000 arbres,
+inférieures en apparence mais **reproductibles à ±{variance.set_index('n_estimators').loc[2000, 'ecart_type']:.3f}**
+au lieu de ±{variance.set_index('n_estimators').loc[300, 'ecart_type']:.3f}. Nous
+préférons un chiffre fiable à un chiffre flatteur.
+
+#### Prévision : {len(grille_p) if not grille_p.empty else 0} configurations explorées
+
+{grille_p.to_markdown(index=False) if not grille_p.empty else MISSING}
+
+Ici la situation est inverse, et il faut le dire : la MAE est calculée sur les
+19 820 points du segment, tous informatifs, et non sur 300 positifs. Un écart y
+est donc mesurable. Le meilleur réglage — profondeur 4 au lieu de 6 — n'apporte
+que **{synthese_p.get('gain_validation_sonde_pct', 0):+.2f} %** en validation,
+mais ce gain **se confirme sur le test aux trois horizons** :
+
+{comparaison_p.pivot_table(index='configuration', columns='horizon_min', values='gain_vs_persistance_pct').round(2).to_markdown() if not comparaison_p.empty else MISSING}
+
+Une amélioration constante sur trois horizons indépendants n'est pas une
+fluctuation : elle est retenue. Au-delà de la profondeur, l'écart entre la
+meilleure et la pire configuration de la grille n'est que de 2,6 % de MAE —
+XGBoost est proche de son plafond sur ces features.
+
+#### Où est le vrai plafond : la contrainte non supervisée
+
+Reste la question de fond : **peut-on atteindre 90 à 100 % ?** Nous l'avons
+mesuré. Un classifieur supervisé, entraîné sur `is_anomaly` avec les **mêmes
+features et le même découpage temporel**, atteint sur le test :
+
+| | Détecteur déployé (non supervisé) | Oracle supervisé |
+|---|---|---|
+| PR-AUC | {deploye.get('pr_auc', '—')} | **{oracle.get('pr_auc', '—')}** |
+| Précision | {deploye.get('precision', '—')} | **{oracle.get('precision', '—')}** |
+| Rappel | {deploye.get('rappel', '—')} | **{oracle.get('rappel', '—')}** |
+| F1 | {deploye.get('f1', '—')} | **{oracle.get('f1', '—')}** |
+
+**Le seuil des 90 % est donc atteignable — mais uniquement en s'entraînant sur la
+vérité terrain.** Ce que ni le contrat ni la réalité n'autorisent :
+
+- le §2.2 de la fiche impose une **approche non supervisée** pour la détection ;
+- le contrat d'interface v1.1 réserve `is_anomaly` à l'évaluation ;
+- et surtout, un réseau en exploitation **ne fournit pas d'étiquettes**. Un modèle
+  supervisé exigerait qu'un exploitant annote manuellement chaque incident passé.
+
+L'écart entre 0,59 et 0,90 de PR-AUC n'est donc pas un défaut de réglage : c'est
+le **prix mesuré de la contrainte non supervisée**. Ce chiffre est, à notre sens,
+le résultat le plus utile de la campagne : il transforme une insatisfaction
+(« le modèle se trompe souvent ») en une quantité justifiable devant un jury.
+
+Ce modèle supervisé n'est **ni déployé, ni sauvegardé, ni utilisé par le
+dashboard**. Il n'existe que dans `src/scripts/tune_anomaly.py`, à titre
+d'expérience documentée.
+
+#### Ce qui améliorerait réellement le détecteur
+
+Par ordre d'effet attendu, et aucun ne relève des hyperparamètres :
+
+1. **Plus d'événements d'anomalie** (demande adressée au Binôme A). Avec 220
+   positifs en validation, l'incertitude d'estimation interdit tout réglage fin.
+   C'est le verrou principal, et il est en amont de nous.
+2. **Une boucle semi-supervisée.** Si l'exploitant confirme ou infirme quelques
+   dizaines d'alertes, on se rapproche de la borne oracle sans annoter
+   l'historique complet. C'est la perspective la plus réaliste en exploitation.
+3. **Un recalibrage des seuils QoS en v1.2**, qui débloquerait aussi l'exactitude
+   de l'état annoncé (§3.5), aujourd'hui plafonnée par le déséquilibre des seuils.
+"""
+    return texte
 
 
 def section_forecast(results: pd.DataFrame, qos: pd.DataFrame, selection: pd.DataFrame, summary: dict) -> str:

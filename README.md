@@ -101,9 +101,9 @@ liste complète des endpoints.
 
 | Fonction | Modèle retenu | Performance sur le segment de test |
 |---|---|---|
-| Détection d'anomalies | Isolation Forest | F1 = 0,653 · PR-AUC = 0,614 · 0,02 fausse alerte/h · 9/9 épisodes détectés |
-| Prévision des KPI | XGBoost multi-horizon | MAE inférieure de 9,8 % / 14,3 % / 21,2 % à la persistance (5 / 15 / 30 min) |
-| État QoS annoncé | seuils du contrat appliqués aux prévisions | ≈ 83 % d'exactitude de l'état, de 5 à 30 min |
+| Détection d'anomalies | Isolation Forest (2 000 arbres) | F1 = 0,631 · PR-AUC = 0,586 · 0,018 fausse alerte/h · 9/9 épisodes détectés |
+| Prévision des KPI | XGBoost multi-horizon | MAE inférieure de 10,0 % / 14,6 % / 20,7 % à la persistance (5 / 15 / 30 min) |
+| État QoS annoncé | seuils du contrat appliqués aux prévisions | ≈ 82 % d'exactitude de l'état, de 5 à 30 min |
 
 Protocole d'évaluation, comparaison baseline / modèle avancé et analyse
 d'erreurs : [`reports/rapport_evaluation_modeles.md`](./reports/rapport_evaluation_modeles.md).
@@ -116,7 +116,15 @@ instructifs que les chiffres :
   pas déployé ;
 - en prévision, le **choix de la fonction de perte a pesé plus lourd que le
   choix du modèle** : avec l'objectif quadratique par défaut, XGBoost était
-  battu par la persistance, à cause des valeurs extrêmes de `packet_loss`.
+  battu par la persistance, à cause des valeurs extrêmes de `packet_loss` ;
+- la campagne d'optimisation a montré qu'**il n'y avait quasiment pas de gain à
+  prendre sur les hyperparamètres**, et qu'un « gain » apparent de +3,9 % en
+  validation n'était que du bruit — la seule graine aléatoire faisait varier la
+  PR-AUC trois fois plus. Le seul progrès fiable a consisté à *réduire cette
+  variance* (2 000 arbres au lieu de 300), et un oracle supervisé chiffre à
+  0,905 de PR-AUC le plafond qu'atteindrait un modèle autorisé à voir les
+  étiquettes — soit **le prix mesuré de la contrainte non supervisée** imposée
+  par le §2.2 du cahier des charges.
 
 ### Reproduire les résultats
 
