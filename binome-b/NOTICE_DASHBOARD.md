@@ -56,8 +56,12 @@ indiquant la commande à lancer — le tableau de bord ne plante pas.
 
 ## 3. Bandeau d'état de la source de données
 
-En haut de page, un bandeau apparaît si le tableau de bord **ne parle pas à
-l'API** du Binôme A :
+La colonne de gauche ne contient aucun réglage : elle indique en permanence si le
+tableau de bord parle à l'API du Binôme A ou s'il fonctionne sur des données
+locales.
+
+En haut de page, un bandeau apparaît également si le tableau de bord **ne parle
+pas à l'API** du Binôme A :
 
 > ⚠️ Mode dégradé : CSV local — historical_kpi.csv
 
@@ -70,15 +74,30 @@ Aucun bandeau = connexion à l'API établie.
 
 ---
 
-## 4. Réglages (colonne de gauche)
+## 4. Réglages
+
+Les réglages sont placés selon leur portée : ceux qui pilotent plusieurs onglets
+sont **en haut de page**, visibles en permanence ; ceux qui n'agissent que sur un
+onglet sont **dans cet onglet**.
+
+### 4.1 En haut de page — communs à plusieurs onglets
 
 | Réglage | Effet |
 |---|---|
-| **Cellule** | Cellule analysée dans les onglets « KPI & anomalies » et « Prévision ». |
+| **Cellule analysée** | Cellule affichée dans « Temps réel », « KPI & anomalies » et « Prévision ». Le nom de la cellule est rappelé en titre de chacun de ces onglets. |
 | **Fenêtre d'observation** | Profondeur d'historique affichée, de 6 h à 7 jours. |
-| **Détecteur d'anomalies** | Modèle utilisé. `isolation_forest` est le modèle retenu et recommandé. |
+| **Détecteur d'anomalies** | Modèle utilisé par « Vue d'ensemble » et « KPI & anomalies ». `isolation_forest` est le modèle retenu et recommandé. |
 | **Sensibilité** | Part du temps que l'on accepte de voir en alerte. |
-| **Afficher la vérité terrain** | Superpose les anomalies réelles. **Démonstration uniquement.** |
+
+### 4.2 Dans les onglets — portée limitée
+
+| Réglage | Onglet | Effet |
+|---|---|---|
+| **Afficher la vérité terrain** | KPI & anomalies | Superpose les anomalies réelles. **Démonstration uniquement.** |
+| **Modèle de prévision** | Prévision | Choix entre XGBoost (modèle retenu) et les trois baselines. |
+| **KPI à prévoir** | Prévision | Indicateur tracé. |
+| **Rafraîchissement automatique** | Temps réel | Réexécute la vue à la cadence du flux. |
+| **Points affichés** | Temps réel | Nombre de mesures du flux tracées. |
 
 ### Bien régler la sensibilité
 
@@ -190,9 +209,24 @@ Dessous, trois vignettes donnent l'**état QoS annoncé** à chaque horizon, obt
 en appliquant les seuils du contrat aux KPI prévus. C'est l'information
 opérationnelle : elle transforme une prévision numérique en décision.
 
-Un tableau rappelle la fiabilité mesurée de cette annonce (environ 83 %
-d'exactitude d'état, et 13–15 % de dégradations critiques manquées) — à garder en
-tête avant d'agir sur la seule base d'une prévision.
+Un tableau rappelle la fiabilité mesurée de cette annonce (environ 82 %
+d'exactitude d'état, et 14–15 % de dégradations critiques manquées) — à garder en
+tête avant d'agir sur la seule base d'une prévision. Attention : ces chiffres ont
+été établis avec XGBoost et ne décrivent pas les baselines.
+
+**Le sélecteur « Modèle de prévision »** permet de comparer visuellement le modèle
+retenu à ses trois références :
+
+| Modèle | Ce qu'il suppose |
+|---|---|
+| **xgboost** | modèle retenu, apprend les dynamiques et les interactions entre KPI |
+| **persistance** | « la valeur ne changera pas » — la référence que tout modèle doit battre |
+| **moyenne mobile 15 min** | « la valeur restera proche de sa moyenne récente » |
+| **naïf saisonnier 24 h** | « il se passera la même chose qu'hier à la même heure » |
+
+C'est l'illustration la plus parlante en soutenance : à 30 minutes d'horizon,
+l'écart entre la courbe XGBoost et la courbe de persistance se voit à l'œil nu,
+là où un tableau de MAE reste abstrait.
 
 ### 5.5 Qualité des modèles
 
