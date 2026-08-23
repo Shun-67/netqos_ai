@@ -20,3 +20,12 @@ logs/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Exports Word : artefacts régénérables depuis les .md versionnés.
+# GitHub rend déjà les .md avec leurs tableaux et leurs figures, donc le dépôt
+# fournit des livrables lisibles sans eux. Les versionner ferait grossir
+# l'historique de fichiers binaires indiffables, et surtout exposerait des .docx
+# potentiellement périmés par rapport à leur source.
+# Les produire au moment de la remise :
+#     cd binome-b && python -m src.scripts.export_docx
+reports/docx/
