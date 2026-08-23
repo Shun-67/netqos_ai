@@ -63,7 +63,7 @@ python -m src.scripts.train_anomaly     # -> reports/metrics/anomalie_*
 python -m src.scripts.train_forecast    # -> reports/metrics/prevision_* (~15 min avec ARIMA)
 python -m src.scripts.make_report       # -> reports/rapport_evaluation_modeles.md
 python -m src.scripts.make_samples      # -> binome-b/data/samples/*.csv
-python -m src.scripts.export_docx       # -> reports/docx/*.docx (nécessite pandoc)
+python -m src.scripts.export_docx       # -> reports/docx/*.docx (non versionné ; nécessite pandoc)
 python -m src.scripts.build_docx_template  # reconstruit binome-b/assets/gabarit_netqos.docx
 streamlit run src/dashboard/app.py      # -> http://localhost:8501
 

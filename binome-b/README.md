@@ -127,7 +127,7 @@ binome-b/
 
 Les livrables générés vont dans `reports/` à la racine du dépôt (livrables
 communs) : rapports Markdown, `figures/`, `metrics/`, et `docx/` pour les exports
-Word.
+Word — ce dernier n'étant **pas versionné**, voir ci-dessous.
 
 ### Pourquoi le Markdown est la source et le `.docx` un export
 
@@ -142,6 +142,17 @@ diff Git.
 python -m src.scripts.export_docx          # tous les livrables
 python -m src.scripts.export_docx --fichier ../reports/retours_au_binome_a.md
 ```
+
+`reports/docx/` est dans le `.gitignore` : ces fichiers sont des artefacts, à
+produire au moment de la remise. Deux raisons. GitHub rend déjà les `.md` avec
+leurs tableaux et leurs figures, donc le dépôt fournit des livrables lisibles sans
+eux. Et surtout, un `.docx` versionné peut se retrouver en retard sur son `.md`
+sans que rien ne le signale — ne pas le versionner supprime ce risque, puisqu'on
+le régénère juste avant de le transmettre.
+
+Le script reconvertit d'ailleurs **les cinq documents à chaque exécution**, sans
+détection de changement : c'est plus sûr qu'une comparaison de dates qui pourrait
+sauter un fichier.
 
 La conversion (pandoc) préserve les tableaux, les blocs de code et **embarque les
 figures** dans le fichier, qui reste donc transportable. Toute correction se fait
