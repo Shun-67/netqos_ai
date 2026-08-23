@@ -123,52 +123,77 @@ def load_metrics() -> dict[str, pd.DataFrame]:
 # ==================================================================
 # Barre latérale
 # ==================================================================
-def sidebar(history: pd.DataFrame, detectors: dict) -> dict:
-    st.sidebar.title("📡 NetQoS-AI")
-    st.sidebar.caption(f"Contrat d'interface v{CONTRACT_VERSION} — Binôme B")
+def global_controls(history: pd.DataFrame, detectors: dict) -> dict:
+    """Réglages communs à plusieurs onglets, placés AU-DESSUS des onglets.
 
+    Choix d'ergonomie assumé : un réglage qui pilote plusieurs onglets doit
+    rester visible depuis chacun d'eux. Placés dans la barre latérale, le
+    sélecteur de cellule et la fenêtre d'observation passaient inaperçus — on
+    consultait l'onglet « Temps réel » sans voir de quelle cellule il s'agissait,
+    ni comment en changer. Streamlit affichant les contrôles situés avant
+    `st.tabs()` en permanence, c'est l'emplacement correct.
+
+    Les réglages propres à un seul onglet restent, eux, dans cet onglet.
+    """
     cells = sorted(history["cell_id"].unique())
-    cell_id = st.sidebar.selectbox("Cellule", cells, index=0)
-
     max_ts = history["ts"].max()
-    hours = st.sidebar.slider("Fenêtre d'observation (heures)", 6, 168, 48, step=6)
-    start = max_ts - pd.Timedelta(hours=hours)
 
-    detector_name = st.sidebar.selectbox(
+    colonnes = st.columns([1.1, 1.6, 1.4, 1.4])
+
+    cell_id = colonnes[0].selectbox("Cellule analysée", cells, index=0, key="cell_id")
+
+    heures = colonnes[1].slider(
+        "Fenêtre d'observation (heures)", 6, 168, 48, step=6, key="fenetre_heures",
+        help="Profondeur d'historique affichée dans « KPI & anomalies » et « Prévision ».",
+    )
+
+    detector_name = colonnes[2].selectbox(
         "Détecteur d'anomalies",
         list(detectors.keys()) or ["aucun"],
         index=(list(detectors.keys()).index(DEFAULT_DETECTOR) if DEFAULT_DETECTOR in detectors else 0),
+        key="detecteur",
+        help="`isolation_forest` est le modèle retenu à l'issue de l'évaluation.",
     )
 
-    contamination = st.sidebar.slider(
-        "Sensibilité — part d'alertes visée (%)",
-        0.1, 10.0, 2.0, step=0.1,
+    contamination = colonnes[3].slider(
+        "Sensibilité — alertes visées (%)",
+        0.1, 10.0, 2.0, step=0.1, key="sensibilite",
         help=(
             "Fixe le seuil d'alerte au quantile correspondant du score. Plus la "
             "valeur est basse, moins d'alertes sont émises — et plus le risque "
-            "de manquer un épisode augmente."
+            "de manquer un épisode augmente. 2 % est la valeur pour laquelle les "
+            "modèles ont été évalués."
         ),
     )
 
-    show_truth = st.sidebar.checkbox(
-        "Afficher la vérité terrain",
-        value=False,
-        help=(
-            "Superpose les épisodes d'anomalie réels issus de /eval/labels. "
-            "Réservé à la démonstration : cette information n'existe pas en "
-            "exploitation réelle."
-        ),
-    )
-
-    st.sidebar.divider()
     return {
         "cell_id": cell_id,
-        "start": start,
+        "start": max_ts - pd.Timedelta(hours=heures),
         "end": max_ts,
         "detector_name": detector_name,
         "contamination": contamination / 100,
-        "show_truth": show_truth,
     }
+
+
+def sidebar(source: str) -> None:
+    """Barre latérale : identité et diagnostic, aucun réglage.
+
+    Les réglages ont été remontés au-dessus des onglets (voir `global_controls`).
+    """
+    st.sidebar.title("📡 NetQoS-AI")
+    st.sidebar.caption(f"Contrat d'interface v{CONTRACT_VERSION} — Binôme B")
+    st.sidebar.divider()
+
+    st.sidebar.subheader("Source de données")
+    if source.startswith("API"):
+        st.sidebar.success("Connecté à l'API du Binôme A")
+    else:
+        st.sidebar.warning("Mode dégradé — CSV local")
+    st.sidebar.caption(source)
+    st.sidebar.caption(
+        "Détail des endpoints consommés et de la configuration active : "
+        "onglet « Intégration »."
+    )
 
 
 # ==================================================================
@@ -336,7 +361,14 @@ def _stream_panel(cell_id: str, thresholds: dict, limit: int) -> None:
 
 
 def tab_realtime(thresholds: dict, options: dict) -> None:
-    st.subheader("Flux quasi temps réel")
+    st.subheader(f"Flux quasi temps réel — {options['cell_id']}")
+    st.caption(
+        "Source : `GET /kpi/stream` — mesures **brutes**, telles qu'insérées par le "
+        "simulateur du Binôme A, ni nettoyées ni rééchantillonnées. Elles "
+        "alimenteront l'historique des autres onglets après passage du pipeline "
+        "(toutes les 15 minutes via Airflow). Pour changer de cellule, utiliser le "
+        "sélecteur en haut de page."
+    )
 
     info = load_stream_info()
     interval = int(info.get("emission_interval_seconds", 5))
@@ -388,6 +420,30 @@ def tab_kpi(
     detectors: dict,
 ) -> None:
     cell_id, start, end = options["cell_id"], options["start"], options["end"]
+
+    st.subheader(f"KPI et anomalies — {cell_id}")
+    st.caption(
+        "Source : `GET /kpi/history` — données **nettoyées et rééchantillonnées à "
+        "la minute** par le pipeline du Binôme A. Ce ne sont donc pas les mesures "
+        "de l'onglet « Temps réel » : celles-ci entrent dans cet historique après "
+        "passage du pipeline, soit toutes les 15 minutes via Airflow."
+    )
+
+    # La vérité terrain n'agit que sur cet onglet : sa case appartient donc ici,
+    # et non à un réglage global qui laisserait croire qu'elle influence les
+    # autres vues.
+    show_truth = st.checkbox(
+        "Afficher la vérité terrain (démonstration)",
+        value=False,
+        key="verite_terrain",
+        help=(
+            "Superpose en rouge pâle les épisodes d'anomalie réels, lus via "
+            "`GET /eval/labels`. Cette information n'existe pas sur un réseau en "
+            "exploitation : elle sert à vérifier que les alertes tombent au bon "
+            "endroit. À laisser décochée pour juger le tableau de bord en "
+            "conditions réelles."
+        ),
+    )
 
     window = history[
         (history["cell_id"] == cell_id) & (history["ts"] >= start) & (history["ts"] <= end)
@@ -459,7 +515,7 @@ def tab_kpi(
         )
 
     # Vérité terrain en surimpression (démonstration uniquement)
-    if options["show_truth"]:
+    if show_truth:
         labels = load_labels_safe()
         if not labels.empty:
             truth = labels[
@@ -495,11 +551,48 @@ def tab_kpi(
 # Onglet 3 — Prévision
 # ==================================================================
 def tab_forecast(history: pd.DataFrame, features: pd.DataFrame, thresholds: dict, options: dict, forecaster) -> None:
+    cell_id, start, end = options["cell_id"], options["start"], options["end"]
+
+    st.subheader(f"Prévision — {cell_id}")
+    st.caption(
+        "Source : `GET /features` pour les prédicteurs et `GET /kpi/history` pour "
+        "la courbe observée — données nettoyées, comme dans l'onglet "
+        "« KPI & anomalies »."
+    )
+
+    # Sélecteur de modèle, au même titre que pour la détection d'anomalies.
+    # Les trois baselines ne nécessitent aucun entraînement : elles se calculent
+    # à partir des features (persistance, moyenne mobile) ou de l'historique
+    # (naïf saisonnier). Les rendre disponibles ici permet de constater
+    # directement l'écart avec XGBoost, plutôt que de devoir le lire dans un
+    # tableau de métriques.
+    modeles = {
+        "persistance (baseline)": F.PersistenceForecaster(),
+        "moyenne mobile 15 min (baseline)": F.MovingAverageForecaster(),
+        "naïf saisonnier 24 h (baseline)": F.SeasonalNaiveForecaster().set_history(history),
+    }
+    if forecaster is not None:
+        modeles = {"xgboost (modèle retenu)": forecaster, **modeles}
+
+    colonnes = st.columns([1.4, 1])
+    nom_modele = colonnes[0].selectbox(
+        "Modèle de prévision",
+        list(modeles),
+        index=0,
+        key="modele_prevision",
+        help=(
+            "XGBoost est le modèle retenu. Les trois baselines sont fournies pour "
+            "comparaison : « persistance » suppose que la valeur ne changera pas, "
+            "et c'est la référence que tout modèle doit battre."
+        ),
+    )
+    kpi = colonnes[1].selectbox("KPI à prévoir", KPIS, index=KPIS.index("latency"), key="kpi_prevu")
+    forecaster = modeles[nom_modele]
+
     if forecaster is None:
         st.info("Aucun modèle de prévision entraîné. Lancez `python -m src.scripts.train_forecast`.")
         return
 
-    cell_id, start, end = options["cell_id"], options["start"], options["end"]
     feature_window = features[
         (features["cell_id"] == cell_id) & (features["ts"] >= start) & (features["ts"] <= end)
     ].sort_values("ts").reset_index(drop=True)
@@ -507,8 +600,6 @@ def tab_forecast(history: pd.DataFrame, features: pd.DataFrame, thresholds: dict
     if feature_window.empty:
         st.warning("Aucune feature sur la fenêtre sélectionnée.")
         return
-
-    kpi = st.selectbox("KPI à prévoir", KPIS, index=KPIS.index("latency"))
 
     figure = go.Figure()
     observed = history[
@@ -579,7 +670,12 @@ def tab_forecast(history: pd.DataFrame, features: pd.DataFrame, thresholds: dict
 
     metrics = load_metrics()
     if "etat_qos" in metrics:
-        st.caption("Fiabilité mesurée de cette annonce sur le segment de test :")
+        st.caption(
+            "Fiabilité mesurée de cette annonce sur le segment de test. Ces chiffres "
+            "ont été établis avec **XGBoost**, le modèle retenu : ils ne décrivent "
+            "pas les baselines, qu'un changement de sélecteur ci-dessus permet "
+            "d'afficher à titre de comparaison visuelle."
+        )
         table = metrics["etat_qos"].copy()
         table.columns = ["horizon (min)", "exactitude de l'état", "part de critiques manqués", "n"]
         st.dataframe(table, width="stretch", hide_index=True)
@@ -704,7 +800,7 @@ def main() -> None:
         st.stop()
 
     detectors, forecaster = load_models()
-    options = sidebar(history, detectors)
+    sidebar(source)
 
     if not source.startswith("API"):
         st.info(
@@ -712,6 +808,11 @@ def main() -> None:
             "voir l'onglet « Intégration ».",
             icon="⚠️",
         )
+
+    # Réglages communs à plusieurs onglets : placés ici, ils restent visibles
+    # quel que soit l'onglet actif.
+    options = global_controls(history, detectors)
+    st.divider()
 
     tabs = st.tabs(
         [
