@@ -117,6 +117,19 @@ Deux enseignements méthodologiques :
    n'est pas exploitable. C'est la traduction chiffrée du déséquilibre des seuils
    v1.1 diagnostiqué au §6.1 du rapport d'EDA.
 
+![Courbes précision / rappel des quatre détecteurs](figures/anomalie/precision_rappel.png)
+
+La lecture graphique confirme le classement : la courbe de l'Isolation Forest
+domine sur toute la plage de rappel, et celle de la baseline par seuils reste
+plate au ras de l'axe — une précision de l'ordre de 3 %, quel que soit le seuil.
+
+![Distribution des scores selon la vérité terrain](figures/anomalie/distribution_scores.png)
+
+Cette seconde figure montre *pourquoi* : la séparation des deux distributions
+(normale en bleu, anormale en rouge) est nette pour l'Isolation Forest, beaucoup
+plus confuse pour les autres. Un détecteur ne vaut que par le recouvrement de ces
+deux densités.
+
 ### 2.4 Réglage de l'autoencodeur
 
 Grille explorée, sélection sur la PR-AUC de validation :
@@ -150,6 +163,12 @@ inférieure), ni en robustesse opérationnelle.
 ### 2.6 Analyse d'erreurs par épisode
 
 {_episode_analysis(summary, episodes)}
+
+![Chronogramme de détection sur le segment de test](figures/anomalie/chronogramme_isolation_forest.png)
+
+Chronogramme d'une cellule du segment de test : score d'atypicité, seuil
+d'alerte, épisodes réels en surimpression et alertes émises. C'est la
+représentation la plus directe de ce que voit l'exploitant.
 
 ### 2.7 Campagne d'optimisation : ce qu'elle a donné, et ce qu'elle a révélé
 
@@ -416,6 +435,13 @@ MAE détaillée par KPI et horizon :
 
 {chr(10).join(scopes)}
 
+![MAE par horizon et par KPI](figures/prevision/mae_par_horizon.png)
+
+Une lecture par KPI est indispensable : la hiérarchie des modèles n'est pas la
+même partout. XGBoost creuse l'écart sur `cell_load` et `throughput`, dont la
+dynamique est la plus structurée, et reste au niveau des baselines sur `jitter`,
+le plus bruité des cinq.
+
 ### 3.2 Sélection de l'objectif d'apprentissage — le résultat le plus instructif
 
 {selection.to_markdown(index=False) if not selection.empty else MISSING}
@@ -454,6 +480,20 @@ fortement autocorrélée, et le modèle n'a que peu à ajouter ; à 30 minutes, 
 persistance décroche et l'information portée par la saisonnalité et les
 interactions entre KPI devient déterminante. Un modèle qui n'aurait pas montré
 cette progression aurait signalé une fuite ou une erreur d'alignement des cibles.
+
+![Prévision de la latence à 30 minutes](figures/prevision/exemple_latency_30min.png)
+
+Douze heures du segment de test : la courbe noire est la latence réellement
+observée, les autres sont les prévisions annoncées pour ce même instant. On voit
+que la persistance reproduit la courbe avec un décalage — c'est sa nature — là où
+XGBoost anticipe les inflexions.
+
+![Importance des features](figures/prevision/importance_features.png)
+
+Les importances confirment le cadrage de l'EDA : les lags courts et les moyennes
+glissantes du KPI cible dominent, mais les features des **autres** KPI
+apparaissent — c'est exactement l'information inter-KPI qu'ARIMA ne peut pas
+exploiter, et qui explique son échec.
 
 ### 3.4 Verdict baseline vs modèle avancé
 

@@ -63,6 +63,7 @@ python -m src.scripts.train_anomaly     # -> reports/metrics/anomalie_*
 python -m src.scripts.train_forecast    # -> reports/metrics/prevision_* (~15 min avec ARIMA)
 python -m src.scripts.make_report       # -> reports/rapport_evaluation_modeles.md
 python -m src.scripts.make_samples      # -> binome-b/data/samples/*.csv
+python -m src.scripts.export_docx       # -> reports/docx/*.docx (nécessite pandoc)
 streamlit run src/dashboard/app.py      # -> http://localhost:8501
 
 # Les scripts du binôme B fonctionnent contre l'API ou hors ligne :

@@ -31,6 +31,9 @@ python -m src.scripts.make_report
 
 # 5. Dashboard                       -> http://localhost:8501
 streamlit run src/dashboard/app.py
+
+# 6. Export Word des livrables       -> reports/docx/*.docx
+python -m src.scripts.export_docx
 ```
 
 Toutes les commandes se lancent **depuis `binome-b/`** (les modules sont importés
@@ -123,7 +126,27 @@ binome-b/
 ```
 
 Les livrables générés vont dans `reports/` à la racine du dépôt (livrables
-communs) : rapports Markdown, `figures/`, `metrics/`.
+communs) : rapports Markdown, `figures/`, `metrics/`, et `docx/` pour les exports
+Word.
+
+### Pourquoi le Markdown est la source et le `.docx` un export
+
+Le contrat d'interface du Binôme A est un `.docx`, format attendu pour les
+documents remis à l'encadrement. Nos rapports sont pourtant écrits en Markdown,
+et c'est délibéré : ils sont **générés** depuis `reports/metrics/`, donc tout
+chiffre qui s'y trouve provient d'un fichier de résultats et non d'une saisie
+manuelle. Un `.docx` binaire ne se régénérerait pas et ne se relirait pas dans un
+diff Git.
+
+```bash
+python -m src.scripts.export_docx          # tous les livrables
+python -m src.scripts.export_docx --fichier ../reports/retours_au_binome_a.md
+```
+
+La conversion (pandoc) préserve les tableaux, les blocs de code et **embarque les
+figures** dans le fichier, qui reste donc transportable. Toute correction se fait
+dans le Markdown puis se réexporte : il n'existe jamais deux versions divergentes
+du même document.
 
 ---
 
