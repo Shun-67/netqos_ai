@@ -112,7 +112,7 @@ print(o[['detecteur','precision','rappel','f1','pr_auc','fausses_alertes_par_heu
 | detecteur | precision | rappel | f1 | pr_auc | fausses alertes/h |
 |---|---|---|---|---|---|
 | seuils_contrat | 0,026 | 0,703 | 0,051 | 0,023 | 0,55 |
-| isolation_forest | 0,622 | 0,657 | **0,639** | **0,612** | **0,018** |
+| isolation_forest | 0,616 | 0,647 | **0,631** | **0,586** | **0,018** |
 | dbscan | 0,277 | 0,187 | 0,223 | 0,391 | 0,018 |
 | autoencodeur | 0,383 | 0,397 | 0,390 | 0,363 | 0,003 |
 
@@ -136,7 +136,7 @@ horizon_min             5      15     30
 moyenne_mobile_15m    1.27   1.17   1.53
 naif_saisonnier_24h -34.24 -24.67 -13.80
 persistance          -0.01   0.00  -0.00
-xgboost               9.68  14.40  20.48
+xgboost               9.99  14.59  20.66
 ```
 
 Le point à vérifier : **le gain de XGBoost croît avec l'horizon**. S'il décroissait,
@@ -293,7 +293,7 @@ NETQOS_DATA_SOURCE=api API_BASE_URL=http://localhost:8010/api/v1 python -m src.s
 ```
 
 **Attendu :** exactement les valeurs du niveau 1.3 (`isolation_forest` :
-`P=0.622 R=0.657 F1=0.639`), et une prévalence non nulle sur les trois segments
+`P=0.616 R=0.647 F1=0.631`), et une prévalence non nulle sur les trois segments
 (de l'ordre de 1,3 %).
 
 > Si la prévalence affiche **0,00 %**, c'est que le contournement du défaut
@@ -483,6 +483,17 @@ python -m src.scripts.make_report       # instantané
 python -m src.scripts.make_samples      # instantané
 ```
 
+La campagne d'optimisation est reproductible séparément. Elle n'est pas nécessaire
+pour obtenir les livrables, mais elle produit les tableaux du §2.7 du rapport
+d'évaluation — dont la borne supérieure supervisée, qui justifie chiffres en main
+le niveau de performance atteint :
+
+```bash
+python -m src.scripts.tune_anomaly     # ~12 min : grille, variance, borne oracle
+python -m src.scripts.tune_forecast    # ~15 min : grille XGBoost + vérification
+python -m src.scripts.make_report      # intègre les résultats au rapport
+```
+
 **Attendu :** les mêmes chiffres qu'au niveau 1.3 — la graine aléatoire est fixée
 (`RANDOM_STATE = 42` dans `src/config.py`), donc les résultats sont reproductibles
 à l'identique.
@@ -502,7 +513,10 @@ Contrôles pendant l'exécution :
 ## Récapitulatif des valeurs de référence
 
 > Ces valeurs correspondent au jeu `binome-a/data/raw/historical_kpi.csv` versionné
-> dans le dépôt. Le générateur du Binôme A ancre l'historique sur la date
+> dans le dépôt. Celles du détecteur d'anomalies sont désormais **stables à
+> ±0,005 de PR-AUC** : l'Isolation Forest utilise 2 000 arbres, contre 300
+> auparavant, ce qui a divisé par six la dispersion due à la graine aléatoire
+> (voir §2.7 du rapport d'évaluation). Le générateur du Binôme A ancre l'historique sur la date
 > d'exécution : **régénérer les données déplace la fenêtre temporelle** et fait
 > bouger les métriques de quelques centièmes, sans changer les conclusions. Après
 > une régénération, relancer la chaîne du niveau 5 et actualiser ce tableau.
@@ -517,10 +531,10 @@ Contrôles pendant l'exécution :
 | Taux d'anomalie global | 1,2778 % |
 | Découpage train / val / test | 60 450 / 19 850 / 19 850 |
 | Purge entre segments | ≥ 60 min |
-| Isolation Forest — F1 / PR-AUC | 0,639 / 0,612 |
+| Isolation Forest — F1 / PR-AUC | 0,631 / 0,586 |
 | Isolation Forest — fausses alertes | 0,018 / h |
 | Épisodes détectés | 9 / 9 |
-| XGBoost — gain MAE (5/15/30 min) | +9,7 % / +14,4 % / +20,5 % |
+| XGBoost — gain MAE (5/15/30 min) | +10,0 % / +14,6 % / +20,7 % |
 | Exactitude de l'état QoS annoncé | ≈ 82 % |
 | Écart API ↔ CSV local | 0,0000000000 |
 | Dashboard | 6 onglets, 0 exception |

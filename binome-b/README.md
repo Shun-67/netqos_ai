@@ -147,6 +147,13 @@ Deux résultats à connaître avant de relire le code :
   Avec `reg:squarederror` (défaut), XGBoost était *battu* par la persistance à
   cause des queues lourdes de `packet_loss`. Avec `reg:absoluteerror`, aligné sur
   la métrique MAE, il gagne partout.
+- **L'optimisation des hyperparamètres n'a presque rien donné, et c'est un
+  résultat en soi.** À 300 arbres, la PR-AUC de l'Isolation Forest variait de
+  ±0,03 selon la seule graine aléatoire : plus que tout écart entre
+  configurations. Le seul gain fiable a été de réduire cette variance
+  (2 000 arbres). Un oracle supervisé atteint 0,905 de PR-AUC, ce qui chiffre le
+  coût de la contrainte non supervisée. Détail au §2.7 du rapport d'évaluation,
+  reproductible par `python -m src.scripts.tune_anomaly`.
 
 ---
 
