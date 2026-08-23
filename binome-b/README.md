@@ -38,7 +38,11 @@ en paquet : `python -m src.scripts.…`).
 
 Pour vérifier que tout fonctionne, suivre [`GUIDE_TEST.md`](GUIDE_TEST.md) :
 procédure en cinq niveaux (2 min à 45 min) avec les valeurs attendues à chaque
-étape.
+étape. La suite unitaire, elle, tourne en deux secondes :
+
+```bash
+python -m pytest            # 60 tests, ni base ni API requises
+```
 
 Depuis la racine du dépôt, la stack complète démarre en une commande :
 
@@ -89,7 +93,10 @@ python ../binome-a/src/generator/synthetic_generator.py \
 binome-b/
 ├── Dockerfile                      # image du dashboard
 ├── requirements.txt
+├── pytest.ini
 ├── NOTICE_DASHBOARD.md             # notice d'utilisation (livrable §6.3)
+├── GUIDE_TEST.md                   # procédure de vérification en 5 niveaux
+├── tests/                          # 60 tests pytest (~2 s, sans base ni API)
 └── src/
     ├── config.py                   # chemins, constantes du contrat v1.1, protocole d'éval
     ├── data/
@@ -155,6 +162,11 @@ Deux résultats à connaître avant de relire le code :
   colonne interdite atteint une matrice de features.
 - Métrique de référence en détection : **PR-AUC**. Avec ~1,5 % d'anomalies, la
   ROC-AUC dépasse 0,94 même pour un détecteur inutilisable.
+- Les invariants du protocole sont **verrouillés par des tests** (`tests/`) :
+  refus des colonnes interdites, refus d'étiquettes désalignées, purge effective
+  entre segments, cibles alignées par durée et non par position, et score des
+  détecteurs croissant avec l'atypicité. Ces tests existent parce que deux de ces
+  points ont réellement échoué en cours de projet, sans lever d'erreur.
 
 ---
 
@@ -184,12 +196,13 @@ chiffres dans [`reports/rapport_eda.md`](../reports/rapport_eda.md) §6.1 et §8
    `LabelAlignmentError` qui refuse un taux d'appariement anormalement bas.
 3. **`data_dictionary.md` §5 périmé** — liste `/kpi/raw`, `/kpi/clean`,
    `/stream/latest`, qui n'existent pas dans l'API v1.1 servie.
-4. **Pipeline non idempotent — vérifié sur la stack Docker** : la seconde
-   exécution de `run_pipeline` échoue sur
-   `UniqueViolation: duplicate key ... "4_clean_kpi_measurements_pkey"`. Les
-   données restent intactes (transaction annulée) mais le DAG Airflow, planifié
-   toutes les 15 min, échouera à chaque tick après le premier. Le paramètre
-   `since` existe dans les deux fonctions mais n'est jamais transmis.
+4. **Pipeline non incrémental** — ~~non idempotent~~ **corrigé par le Binôme A** :
+   les écritures passent désormais par `db.upsert_on_conflict`
+   (`ON CONFLICT DO UPDATE`), et deux exécutions consécutives de `run_pipeline`
+   réussissent avec des comptages stables (vérifié sur la stack). Reste que
+   `since` n'est toujours transmis ni par `run_pipeline.py` ni par le DAG : chaque
+   exécution relit et réécrit tout l'amont, soit ~3 min pour 100 000 lignes toutes
+   les 15 min. Correct, mais coûteux à plus grand volume.
 5. **`docker-compose.yml` était absent** — livrable commun §6.1, référencé par
    les trois README. Reconstitué par le Binôme B à la racine, et validé de bout en
    bout (base peuplée, API servie, dashboard lisant l'API) ; les services

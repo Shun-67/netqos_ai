@@ -70,7 +70,15 @@ NETQOS_DATA_SOURCE=local python -m src.scripts.train_anomaly
 NETQOS_DATA_SOURCE=api API_BASE_URL=http://localhost:8010/api/v1 python -m src.scripts.run_eda
 ```
 
-**Aucun test unitaire n'existe dans le dépôt** (pas de pytest, pas de fichier `test_*`), et il n'y a ni linter ni formateur configuré. Si des tests sont demandés, il faut d'abord poser l'infrastructure (choisir pytest, l'ajouter aux `requirements.txt`). Le dashboard se teste en revanche sans navigateur via `streamlit.testing.v1.AppTest` :
+**Tests : une suite pytest existe côté binôme B uniquement** (`binome-b/tests/`, 60 tests, ~2 s). Elle couvre les invariants qu'une régression casserait en silence : garde-fous anti-fuite (`LeakageError`, `LabelAlignmentError`), purge du découpage temporel, alignement des cibles de prévision par durée et non par position, métriques par épisode, règle du pire KPI, et convention de score des détecteurs (score croissant avec l'atypicité). **Le binôme A n'a aucun test.** Il n'y a ni linter ni formateur configuré.
+
+```bash
+cd binome-b && python -m pytest          # 60 tests, sans base ni API
+```
+
+Les tests n'utilisent que des DataFrames construits à la main : ils ne dépendent ni des CSV, ni de TimescaleDB, ni de l'API. `pytest.ini` transforme les `FutureWarning` en erreurs, pour que les dépréciations pandas soient traitées au lieu d'être accumulées.
+
+Le dashboard se teste sans navigateur via `streamlit.testing.v1.AppTest` :
 
 ```bash
 python -c "from streamlit.testing.v1 import AppTest; at=AppTest.from_file('src/dashboard/app.py', default_timeout=300); at.run(); print(len(at.exception), [e.value for e in at.error])"
@@ -79,7 +87,7 @@ python -c "from streamlit.testing.v1 import AppTest; at=AppTest.from_file('src/d
 ## Pièges connus
 
 - **`GET /api/v1/eval/labels` a deux défauts qui invalident silencieusement toute évaluation.** (1) Il sert les `ts` de `raw_kpi_measurements`, non rééchantillonnés (`20:21:41`), alors que `/kpi/history` et `/features` servent la minute pleine (`20:21:00`) : une jointure sur `(ts, cell_id)` n'apparie aucune ligne, la prévalence devient 0 % et toutes les métriques de détection tombent à zéro sans erreur. (2) Il accepte `limit`/`offset` mais omet `has_more`/`total`/`limit`/`offset` de son enveloppe : un client paginant sur `has_more` ne lit qu'une page. Les deux sont contournés côté binôme B dans `loader.load_labels()` et `api_client._get_paginated()` ; ne pas retirer ces contournements sans avoir vérifié que l'API a été corrigée. `splits.align_labels()` lève `LabelAlignmentError` si le taux d'appariement passe sous 50 %.
-- **Le pipeline n'est pas idempotent** (vérifié sur la stack Docker). `clean_prepare.py` et `build_features.py` relisent la table amont *en entier* et font un `to_sql(if_exists="append")` : la seconde exécution échoue sur `psycopg2.errors.UniqueViolation` (clé primaire `(ts, cell_id)`). Les données ne sont pas corrompues, mais le DAG Airflow échoue à chaque tick après le premier. Le paramètre `since` existe dans les deux fonctions mais n'est jamais passé, ni par `run_pipeline.py` ni par le DAG.
+- **Le pipeline relit tout l'amont à chaque exécution.** `clean_prepare.py` et `build_features.py` relisent la table amont *en entier* ; le paramètre `since` existe dans les deux fonctions mais n'est jamais passé, ni par `run_pipeline.py` ni par le DAG. Compter ~3 min pour 100 000 lignes, à chaque tick de 15 min. En revanche l'**idempotence est acquise** : les écritures passent par `db.upsert_on_conflict` (`ON CONFLICT DO UPDATE` sur `(ts, cell_id)`), et deux exécutions consécutives réussissent — ne pas remplacer ce `method=` par `method="multi"`, cela ferait réapparaître l'échec sur `UniqueViolation`.
 - **Ports hôtes fréquemment occupés** : 5432 et 8000 le sont sur la machine de développement. Démarrer avec `POSTGRES_HOST_PORT=5433 API_PORT=8010 DASHBOARD_PORT=8511 docker compose up -d`. Ne pas confondre `POSTGRES_HOST_PORT` (port publié) et `POSTGRES_PORT` (port interne au réseau Docker, toujours 5432).
 - **`src/db.py` et `.env.example` divergent** : les valeurs par défaut du code sont `netqos`/`netqos`/`localhost`/`netqos`, alors que `.env.example` fournit `netqos_db` et `POSTGRES_HOST=timescaledb` (valable dans Docker uniquement). Pour lancer les scripts hors conteneur, `POSTGRES_HOST=localhost` est requis.
 - Le `§5` de [binome-a/data_dictionary.md](binome-a/data_dictionary.md) liste des endpoints périmés (`/kpi/raw`, `/kpi/clean`, `/stream/latest`) ; la référence réelle est le tableau du [README du binôme A](binome-a/README.md) et le code de [binome-a/src/api/main.py](binome-a/src/api/main.py).
