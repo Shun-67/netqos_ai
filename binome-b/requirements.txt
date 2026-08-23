@@ -26,6 +26,9 @@ tabulate>=0.9        # validé : 0.10.0 — tableaux Markdown des rapports gén�
 requests>=2.32
 python-dotenv>=1.0
 
+# --- Tests ---
+pytest>=8.0           # validé : 9.1.1 — suite dans binome-b/tests/, `python -m pytest`
+
 # --- Exploration ---
 jupyter>=1.0
 notebook>=7.2
