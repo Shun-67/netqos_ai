@@ -148,6 +148,22 @@ figures** dans le fichier, qui reste donc transportable. Toute correction se fai
 dans le Markdown puis se réexporte : il n'existe jamais deux versions divergentes
 du même document.
 
+Le style suit celui du contrat d'interface du Binôme A — titres en bleu `2E74B5`,
+`Courier New` pour le code, pied de page paginé, langue fr-FR. Le gabarit est
+**construit par un script** plutôt que déposé comme binaire, afin que chaque choix
+de mise en forme soit justifié et vérifiable :
+
+```bash
+python -m src.scripts.build_docx_template      # -> assets/gabarit_netqos.docx
+```
+
+Le contrat du Binôme A ne peut pas servir directement de `--reference-doc` : son
+corps n'utilise qu'un seul style nommé, sa mise en forme étant appliquée
+directement run par run, et ses `docDefaults` sont vides. L'employer tel quel
+priverait les exports du style des blocs de code, des tableaux et des légendes. Le
+script part donc du gabarit de pandoc, qui définit les 49 styles nécessaires, et y
+applique les conventions visuelles relevées dans le document de référence.
+
 ---
 
 ## Choix de modélisation
