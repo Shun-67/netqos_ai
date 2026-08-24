@@ -651,25 +651,74 @@ totalité du segment.
 
 ## 6. Limites et perspectives
 
-1. **Volume d'épisodes d'anomalie insuffisant pour l'évaluation par épisode.**
-   9 épisodes dans le segment de test : puissance statistique faible. Demande
-   adressée au Binôme A (densité d'événements ou historique plus long).
-2. **Seuils QoS v1.1 déséquilibrés** (43 % du temps en « critique »). Plafonne
-   mécaniquement la qualité de l'état annoncé. Révision v1.2 demandée, options
-   documentées au §6.1 du rapport d'EDA. Le contrat gelé reste néanmoins
-   appliqué tel quel dans tout le code.
-3. **Données synthétiques.** Les anomalies sont injectées par trois mécanismes
+Ces limites se répartissent en deux familles, qu'il faut distinguer parce qu'elles
+n'appellent pas la même réponse : celles qui viennent de **contraintes amont**,
+subies mais compensées, et celles qui relèvent de **choix de périmètre** du Binôme B.
+
+### 6.1 Contraintes amont, et ce que nous avons fait pour les absorber
+
+Ces trois points ont été signalés au Binôme A dans une note datée
+(`reports/retours_au_binome_a.md`). Ils n'ont pas été corrigés dans le temps du
+projet, et le contrat d'interface étant gelé, nous ne les avons pas modifiés
+unilatéralement. Chacun a en revanche fait l'objet d'une mesure de mitigation, et
+c'est cela qui est évaluable dans notre travail.
+
+1. **Seuils QoS v1.1 déséquilibrés** — l'état « critique » couvre 43 % du temps,
+   « bon » 8 %, parce que les seuils ont été calibrés indicateur par indicateur
+   sans tenir compte de la règle d'agrégation qui les combine. **Impact mesuré** :
+   la baseline de détection par seuils tombe à une PR-AUC de 0,023, au niveau du
+   hasard, et l'exactitude de l'état QoS annoncé est plafonnée à ~82 %.
+   **Ce que nous avons fait** : quantifié le mécanisme (§6.1 du rapport d'EDA),
+   proposé deux options de recalibrage chiffrées, appliqué le contrat gelé tel
+   quel dans tout le code — y compris là où il nous dessert — et affiché
+   l'avertissement dans le dashboard pour qu'un exploitant ne prenne pas 43 % de
+   rouge pour un réseau en panne.
+
+2. **Densité d'anomalies trop faible** — 9 épisodes dans le segment de test.
+   **Impact mesuré** : les quatre détecteurs atteignent 100 % de rappel par
+   épisode, métrique qui ne les départage donc pas ; l'intervalle de confiance à
+   95 % d'une proportion de 9/9 descend à environ 70 %.
+   **Ce que nous avons fait** : substitué le **taux de fausses alertes par
+   heure** comme métrique discriminante (facteur 30 entre le meilleur et le pire
+   détecteur), et énoncé explicitement la faiblesse de puissance statistique
+   plutôt que de présenter le 100 % comme un résultat.
+
+3. **`GET /eval/labels` inexploitable en l'état** — ses horodatages ne sont pas
+   rééchantillonnés, et son enveloppe omet `has_more`. **Impact mesuré** : une
+   jointure directe n'apparie aucune ligne, la prévalence tombe à 0 % et toutes
+   les métriques de détection s'effondrent à zéro **sans qu'aucune erreur ne soit
+   levée** — c'est arrivé lors de notre première campagne contre l'API réelle.
+   **Ce que nous avons fait** : réaligné les étiquettes sur la grille minute et
+   dérouler la pagination sur la taille de page à défaut de `has_more`, puis —
+   surtout — ajouté un garde-fou (`LabelAlignmentError`) qui refuse un taux
+   d'appariement inférieur à 50 %. Une panne silencieuse est devenue une erreur
+   explicite, et le cas est verrouillé par un test.
+
+   Ces contournements vivent côté Binôme B et sont désormais **permanents**. Ils
+   sont signalés comme tels dans le code : les retirer exige d'avoir vérifié au
+   préalable que l'API a été corrigée.
+
+### 6.2 Choix de périmètre du Binôme B
+
+4. **Données synthétiques.** Les anomalies sont injectées par trois mécanismes
    paramétrés (panne, congestion, dégradation progressive) : un détecteur peut y
    réussir sans généraliser à des dégradations réelles, plus variées. Toute
-   transposition à des traces réelles exigerait une réévaluation complète.
-4. **Absence d'entraînement incrémental.** Les modèles sont réentraînés hors
+   transposition à des traces réelles exigerait une réévaluation complète. C'est
+   la limite la plus fondamentale de l'ensemble du projet, les deux binômes
+   confondus.
+5. **Plafond de la détection non supervisée.** L'écart entre 0,59 et 0,90 de
+   PR-AUC mesuré au §2.7 n'est pas réductible par le réglage : il tient à
+   l'interdiction d'utiliser les étiquettes à l'entraînement. La perspective
+   réaliste n'est pas un meilleur modèle mais une **boucle semi-supervisée**, où
+   l'exploitant confirme quelques dizaines d'alertes.
+6. **Absence d'entraînement incrémental.** Les modèles sont réentraînés hors
    ligne. Un déploiement réel nécessiterait un réentraînement périodique et un
    suivi de dérive, la distribution du trafic évoluant avec le parc.
-5. **Prévision ponctuelle sans intervalle.** Seule la valeur médiane est prévue.
+7. **Prévision ponctuelle sans intervalle.** Seule la valeur médiane est prévue.
    Un intervalle de prédiction (objectif quantile, déjà disponible dans XGBoost)
    donnerait à l'exploitant une mesure d'incertitude, et permettrait d'alerter
    sur la probabilité de franchir un seuil plutôt que sur une valeur unique.
-   C'est la perspective la plus directement exploitable.
+   C'est la perspective la plus directement exploitable, et la moins coûteuse.
 
 ---
 
