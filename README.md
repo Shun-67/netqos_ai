@@ -69,8 +69,24 @@ netqos-ai/
 └── .gitignore
 ```
 
-[À compléter] Schéma d'architecture en 6 couches (voir `reports/architecture_schema.png`,
-à produire conjointement — cf. cahier des charges partie 4.4).
+### Schéma d'architecture
+
+![Architecture en six couches](reports/architecture_schema.png)
+
+Les six couches du §4.1 du cahier des charges, les flux de données entre elles, et
+la frontière A ↔ B matérialisée par l'API — les trois éléments exigés au §4.4.
+
+Le schéma est **généré par script** (`binome-b/src/scripts/make_architecture.py`)
+et non dessiné : chaque libellé porte le nom réel d'un fichier ou d'une table du
+dépôt, il se régénère si l'architecture évolue, et il se relit dans un diff.
+
+Deux éléments méritent l'attention à la lecture :
+
+- le **chemin isolé de `is_anomaly`** (flèche rouge en tirets). La vérité terrain
+  n'existe que dans la table brute et n'est exposée que par `/eval/labels`. C'est
+  ce qui garantit que la détection d'anomalies reste non supervisée ;
+- la **frontière A ↔ B**, franchie uniquement en HTTP sur `/api/v1`. Aucun accès
+  SQL ni import de code ne la traverse.
 
 ## Contrat d'interface
 
