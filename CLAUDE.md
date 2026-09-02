@@ -114,9 +114,11 @@ Branches nommées `binome-a/<fonctionnalité>` ou `binome-b/<fonctionnalité>`, 
 
 | Jalon | Livrable | État |
 |-------|----------|------|
-| J7  | Contrat d'interface figé + EDA | fait (contrat v1.1) |
-| J14 | Baselines anomalie et prévision | pipeline A fonctionnel ; modèles B non implémentés |
-| J21 | Modèles avancés + dashboard | Airflow fait ; dashboard à l'état de squelette |
-| J30 | Soutenance finale | — |
+| J7  | Contrat d'interface figé + EDA | fait (contrat v1.1 ; `reports/rapport_eda.md`) |
+| J14 | Baselines anomalie et prévision | fait (4 détecteurs, 4 prévisionnistes, protocole d'évaluation) |
+| J21 | Modèles avancés + dashboard | fait (autoencodeur, XGBoost, dashboard 6 onglets, Airflow, intégration A ↔ B vérifiée) |
+| J30 | Soutenance finale | rapports, schéma d'architecture et rapport de stage B produits ; **reste le support de soutenance et le déroulé de la démo** |
 
-Côté binôme B, `src/models/anomaly.py` (Isolation Forest → autoencodeur) et `src/models/forecast.py` (moyenne mobile/ARIMA → Prophet/XGBoost/LSTM) ne contiennent qu'un docstring et `# À implémenter` ; `src/dashboard/app.py` n'est qu'un placeholder Streamlit.
+Côté binôme B, tout le code est implémenté : `src/models/anomaly.py` (seuils du contrat, Isolation Forest, DBSCAN, autoencodeur), `src/models/forecast.py` (persistance, moyenne mobile, naïf saisonnier, ARIMA, XGBoost multi-horizon), `src/models/qos_state.py`, et `src/dashboard/app.py` (6 onglets, dont un temps réel par `st.fragment`). Prophet et LSTM ont été **écartés par choix de périmètre**, documenté au §4 de `reports/rapport_evaluation_modeles.md` — ne pas les réintroduire sans acter ce changement.
+
+Modèles retenus, pour ne pas re-dériver ces chiffres : détection = Isolation Forest 2 000 arbres (F1 0,631 · PR-AUC 0,586 · 0,018 fausse alerte/h · 9/9 épisodes) ; prévision = XGBoost multi-horizon (MAE inférieure de 10,0 / 14,6 / 20,7 % à la persistance à 5 / 15 / 30 min) ; état QoS annoncé ≈ 82 % d'exactitude. La borne oracle supervisée (PR-AUC 0,905) chiffre le prix de la contrainte non supervisée — elle n'est ni déployée ni sauvegardée.
