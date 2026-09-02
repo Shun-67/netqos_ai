@@ -109,7 +109,7 @@ liste complète des endpoints.
 | **J7** | Contrat d'interface figé + EDA | contrat v1.1 figé le 2026-08-10 · EDA Binôme B produite ([`reports/rapport_eda.md`](./reports/rapport_eda.md)) |
 | **J14** | Pipeline bout-en-bout fonctionnel | pipeline A opérationnel · 4 baselines anomalie et 4 baselines prévision évaluées côté B |
 | **J21** | Intégration A ↔ B (le dashboard lit l'API) | **atteint** — vérifié sur la stack Docker · modèles avancés (autoencodeur, XGBoost) · dashboard à 6 onglets dont un temps réel |
-| **J30** | Plateforme complète, documentée, démontrée | rapport d'évaluation et notice du dashboard produits · *reste à faire : schéma d'architecture, rapport de projet, support de soutenance* |
+| **J30** | Plateforme complète, documentée, démontrée | rapport d'évaluation, notice du dashboard, schéma d'architecture et rapport de stage Binôme B produits ([`reports/rapport_stage_binome_b.md`](./reports/rapport_stage_binome_b.md)) · *reste à faire : support de soutenance et déroulé de la démo* |
 
 ## Résultats et démonstration
 

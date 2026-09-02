@@ -49,6 +49,14 @@ DOCUMENTS = {
         "title": "Retours du Binôme B au Binôme A",
         "subtitle": "Points relevés pendant l'intégration A ↔ B",
     },
+    # Document nominatif : l'auteur est le stagiaire, pas le binôme. La clé
+    # `author` remplace la valeur commune, que le lecteur du jury attendrait
+    # sous forme de nom propre.
+    "rapport_stage_binome_b.md": {
+        "title": "Rapport de stage — NetQoS-AI",
+        "subtitle": "Intelligence artificielle, modélisation et restitution — Binôme B",
+        "author": "[NOM ET PRÉNOM DU STAGIAIRE]",
+    },
 }
 
 # Documents de `binome-b/` : chemins relatifs à ce dossier, pas à reports/.
@@ -103,7 +111,7 @@ def exporter(
         "--metadata",
         f"subtitle={metadonnees['subtitle']}",
         "--metadata",
-        f"author={AUTEUR}",
+        f"author={metadonnees.get('author', AUTEUR)}",
         "--metadata",
         "lang=fr-FR",
     ]
