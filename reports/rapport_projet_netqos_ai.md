@@ -155,7 +155,7 @@ richesse du simulateur.
 
 | Binôme | Périmètre | Livrables |
 |---|---|---|
-| **A** | Ingénierie des données & pipeline | Générateur synthétique, ingestion batch et flux, nettoyage, ingénierie de caractéristiques, base TimescaleDB, API REST FastAPI, orchestration Airflow, guide de déploiement |
+| **A** | Ingénierie des données & pipeline | Générateur synthétique, ingestion batch et flux, nettoyage, ingénierie de caractéristiques, base TimescaleDB, API REST FastAPI, orchestration Airflow |
 | **B** | Intelligence artificielle & restitution | Analyse exploratoire, protocole d'évaluation, détecteurs d'anomalies, modèles de prévision, classification de l'état QoS, tableau de bord Streamlit, rapport d'évaluation, notice, guide de test |
 
 Le **contrat d'interface**, figé au jalon J7 le 10 août 2026 en version 1.1, est
@@ -614,13 +614,6 @@ résolution a nécessité l'arrêt propre de tous les services, la suppression
 ciblée du volume périmé, la reconstruction complète de la stack, puis la
 reconstitution du jeu de données.
 
-Pour éviter de reproduire ce diagnostic le jour d'une démonstration, le Binôme A
-a rédigé un **guide opérationnel** (`README_DEMO.md`) formalisant la procédure
-d'arrêt et de relance, la récupération du mot de passe administrateur généré par
-Airflow, la liste des vérifications de bon fonctionnement à effectuer avant une
-démonstration, et une procédure de secours pour repeupler la base. Ce document
-transforme une connaissance acquise en débogage en un actif réutilisable.
-
 **Binôme B.** Une revue d'avancement a posé une question qui a orienté toute la
 semaine : les modèles ont-ils été optimisés, et si le modèle retenu n'atteint pas
 les 90 à 100 % qu'on attend d'un modèle d'apprentissage, peut-on le justifier ?
@@ -986,8 +979,8 @@ de nettoyage **idempotent et rejouable sans effet de bord** ; un module de
 caractéristiques produisant 43 colonnes dérivées par point, dont une développée à
 la demande du Binôme B ; une API REST complète et auto-documentée ; un pipeline
 orchestré par Airflow avec suivi visuel et reprise sur échec ; un simulateur de
-flux quasi temps réel ; une plateforme entièrement conteneurisée démarrable en
-une commande ; et un guide opérationnel de déploiement et de démonstration.
+flux quasi temps réel ; et une plateforme entièrement conteneurisée démarrable
+en une commande.
 
 **Contrôle de conformité automatique.** Le Binôme B exécute à chaque analyse
 exploratoire une série de contrôles sur le flux servi — volumétrie, absence de
@@ -1593,7 +1586,6 @@ netqos_ai/
 │   ├── airflow/
 │   │   ├── Dockerfile
 │   │   └── dags/netqos_pipeline_dag.py
-│   ├── README_DEMO.md            # procédure de démonstration
 │   └── src/
 │       ├── db.py                 # moteur + upsert mutualisé
 │       ├── generator/synthetic_generator.py
@@ -1819,7 +1811,7 @@ NETQOS_DATA_SOURCE=api API_BASE_URL=http://localhost:8010/api/v1 \
 ```
 
 Procédure de vérification détaillée, avec les valeurs attendues à chaque étape :
-`binome-b/GUIDE_TEST.md`. Procédure de démonstration : `binome-a/README_DEMO.md`.
+`binome-b/GUIDE_TEST.md`.
 
 ### Annexe G — Documents de référence
 
@@ -1832,7 +1824,6 @@ Procédure de vérification détaillée, avec les valeurs attendues à chaque é
 | `reports/retours_au_binome_a.md` | Six points relevés pendant l'intégration, avec diagnostic reproductible |
 | `binome-b/NOTICE_DASHBOARD.md` | Notice d'utilisation du tableau de bord |
 | `binome-b/GUIDE_TEST.md` | Vérification en cinq niveaux, avec valeurs attendues |
-| `binome-a/README_DEMO.md` | Procédure de démonstration et de remise en route |
 
 ### Annexe H — Glossaire
 
