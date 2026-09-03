@@ -131,7 +131,6 @@ leurs tableaux et leurs figures, ils sont donc lisibles sans rien installer.
 | Rapport d'évaluation des modèles | §6.3 | [`reports/rapport_evaluation_modeles.md`](./reports/rapport_evaluation_modeles.md) |
 | Notice d'utilisation du tableau de bord | §6.3 | [`binome-b/NOTICE_DASHBOARD.md`](./binome-b/NOTICE_DASHBOARD.md) |
 | Guide de vérification en cinq niveaux | — | [`binome-b/GUIDE_TEST.md`](./binome-b/GUIDE_TEST.md) |
-| Procédure de démonstration | — | [`binome-a/README_DEMO.md`](./binome-a/README_DEMO.md) |
 | Retours techniques du Binôme B au Binôme A | — | [`reports/retours_au_binome_a.md`](./reports/retours_au_binome_a.md) |
 | Documentation de l'API (OpenAPI) | §6.2 | `http://localhost:8000/docs`, API démarrée |
 
