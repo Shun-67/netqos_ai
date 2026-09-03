@@ -106,6 +106,14 @@ python -c "from streamlit.testing.v1 import AppTest; at=AppTest.from_file('src/d
 - Une valeur manquante en base est `NULL`, jamais `0` ni `-1` ; les valeurs imputées sont marquées par `is_missing`.
 - Les splits entraînement/validation doivent rester **chronologiques** : ne pas introduire de mélange de timestamps côté A qui provoquerait une fuite de données.
 
+## Rapport de projet
+
+Le §6.1 de la fiche de stage fait du **rapport de projet un livrable commun**, pas un rapport par binôme : `reports/rapport_projet_netqos_ai.md` est le document unique, signé des deux binômes, structuré comme la fiche l'exige (contexte, architecture, choix techniques, résultats, limites et perspectives). Ne pas recréer de rapport séparé par binôme — le rapport d'évaluation des modèles (§6.3) est le seul livrable rédigé propre au binôme B.
+
+Il s'agit d'un **projet de stage académique** (ESMT / DETIC), non d'un stage en entreprise : aucune structure d'accueil ni maître de stage à mentionner. Encadrant : Prof. Boudal NIANG.
+
+Le binôme A a produit sa propre version du rapport commun (`Rapport_Stage_NetQoS-AI_AB.docx`, hors dépôt). Sa section sur le binôme B est écrite de l'extérieur et contient des erreurs de fond — un modèle par cellule au lieu d'une normalisation par cellule, score d'anomalie confondu avec l'état QoS, ARIMA/Prophet donné comme modèle retenu au lieu de XGBoost, autoencodeur et DBSCAN absents. Ne pas s'en servir comme source sur le travail du binôme B.
+
 ## Convention Git
 
 Branches nommées `binome-a/<fonctionnalité>` ou `binome-b/<fonctionnalité>`, mergées sur `main` après validation uniquement.
@@ -117,7 +125,7 @@ Branches nommées `binome-a/<fonctionnalité>` ou `binome-b/<fonctionnalité>`, 
 | J7  | Contrat d'interface figé + EDA | fait (contrat v1.1 ; `reports/rapport_eda.md`) |
 | J14 | Baselines anomalie et prévision | fait (4 détecteurs, 4 prévisionnistes, protocole d'évaluation) |
 | J21 | Modèles avancés + dashboard | fait (autoencodeur, XGBoost, dashboard 6 onglets, Airflow, intégration A ↔ B vérifiée) |
-| J30 | Soutenance finale | rapports, schéma d'architecture et rapport de stage B produits ; **reste le support de soutenance et le déroulé de la démo** |
+| J30 | Soutenance finale | rapports, schéma d'architecture et **rapport de projet commun** (`reports/rapport_projet_netqos_ai.md`) produits ; **reste le support de soutenance et le déroulé de la démo** |
 
 Côté binôme B, tout le code est implémenté : `src/models/anomaly.py` (seuils du contrat, Isolation Forest, DBSCAN, autoencodeur), `src/models/forecast.py` (persistance, moyenne mobile, naïf saisonnier, ARIMA, XGBoost multi-horizon), `src/models/qos_state.py`, et `src/dashboard/app.py` (6 onglets, dont un temps réel par `st.fragment`). Prophet et LSTM ont été **écartés par choix de périmètre**, documenté au §4 de `reports/rapport_evaluation_modeles.md` — ne pas les réintroduire sans acter ce changement.
 

@@ -1,8 +1,7 @@
 # NetQoS-AI
 
-> **Brouillon initial — à compléter et valider ensemble (Binôme A + Binôme B)
-> avant de le considérer comme définitif.** Les sections marquées `[À compléter]`
-> restent à rédiger collectivement.
+> Les sections marquées `[À compléter]` restent à produire : il s'agit des
+> captures d'écran de la démonstration (semaine 4).
 
 Plateforme intelligente de surveillance et de prévision de la qualité de
 service réseau. Projet ESMT / DETIC — Ingénierie des Données et Intelligence
@@ -17,10 +16,32 @@ Artificielle, année académique 2025-2026.
 
 Encadrant : Prof. Boudal NIANG.
 
-## [À compléter] Présentation du projet
+## Présentation du projet
 
-*(2-3 paragraphes : contexte QoS, objectif de la plateforme, ce qui la rend
-pertinente — à rédiger ensemble à partir de la fiche de projet)*
+La qualité de service est un enjeu central pour tout opérateur de réseau : une
+dégradation non détectée à temps se traduit par une expérience utilisateur
+dégradée et par un risque sur les engagements de niveau de service. Les réseaux
+produisent un volume massif d'indicateurs horodatés, mais ils sont le plus
+souvent observés *a posteriori* plutôt que transformés en capacité
+d'anticipation.
+
+La supervision traditionnelle repose sur des seuils fixes, dont ce projet a
+mesuré les deux limites plutôt que de les postuler. Un seuil fixe ignore la
+variabilité normale du trafic — une charge à 90 % est banale à l'heure de pointe
+et anormale à quatre heures du matin. Et il ne détecte que les anomalies
+d'amplitude, pas celles de forme. Chiffré sur nos données : les seuils du
+contrat classent « critique » **42,5 % des instants pourtant normaux**, tout en
+laissant **14,2 % des anomalies réelles** sous leur radar.
+
+NetQoS-AI dépasse cette limite en combinant un pipeline de données
+industrialisé (Binôme A) avec des méthodes d'apprentissage évaluées selon un
+protocole à l'épreuve de la fuite de données (Binôme B), restituées dans un
+tableau de bord destiné à un exploitant réseau. Le détecteur retenu multiplie
+par douze le F1 des seuils fixes et divise leurs fausses alertes par trente,
+**sans jamais voir une étiquette d'anomalie**.
+
+Présentation complète — contexte, architecture, choix techniques, résultats,
+limites et perspectives : [`reports/rapport_projet_netqos_ai.md`](./reports/rapport_projet_netqos_ai.md).
 
 ## Démarrage rapide
 
@@ -63,7 +84,7 @@ Vérifications :
 netqos-ai/
 ├── binome-a/              # Collecte, nettoyage, stockage, API (voir binome-a/README.md)
 ├── binome-b/               # Modèles IA, dashboard (voir binome-b/README.md)
-├── reports/                 # Livrables communs (contrat d'interface, schéma d'architecture, rapport)
+├── reports/                 # Livrables communs (contrat d'interface, schéma d'architecture, rapport de projet)
 ├── docker-compose.yml        # Lance toute la stack en une commande
 ├── .env.example
 └── .gitignore
@@ -109,7 +130,7 @@ liste complète des endpoints.
 | **J7** | Contrat d'interface figé + EDA | contrat v1.1 figé le 2026-08-10 · EDA Binôme B produite ([`reports/rapport_eda.md`](./reports/rapport_eda.md)) |
 | **J14** | Pipeline bout-en-bout fonctionnel | pipeline A opérationnel · 4 baselines anomalie et 4 baselines prévision évaluées côté B |
 | **J21** | Intégration A ↔ B (le dashboard lit l'API) | **atteint** — vérifié sur la stack Docker · modèles avancés (autoencodeur, XGBoost) · dashboard à 6 onglets dont un temps réel |
-| **J30** | Plateforme complète, documentée, démontrée | rapport d'évaluation, notice du dashboard, schéma d'architecture et rapport de stage Binôme B produits ([`reports/rapport_stage_binome_b.md`](./reports/rapport_stage_binome_b.md)) · *reste à faire : support de soutenance et déroulé de la démo* |
+| **J30** | Plateforme complète, documentée, démontrée | rapport d'évaluation, notice du dashboard, schéma d'architecture et **rapport de projet commun** produits ([`reports/rapport_projet_netqos_ai.md`](./reports/rapport_projet_netqos_ai.md)) · *reste à faire : support de soutenance et déroulé de la démo* |
 
 ## Résultats et démonstration
 
