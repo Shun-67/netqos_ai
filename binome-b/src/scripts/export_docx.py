@@ -49,13 +49,12 @@ DOCUMENTS = {
         "title": "Retours du Binôme B au Binôme A",
         "subtitle": "Points relevés pendant l'intégration A ↔ B",
     },
-    # Document nominatif : l'auteur est le stagiaire, pas le binôme. La clé
-    # `author` remplace la valeur commune, que le lecteur du jury attendrait
-    # sous forme de nom propre.
-    "rapport_stage_binome_b.md": {
-        "title": "Rapport de stage — NetQoS-AI",
-        "subtitle": "Intelligence artificielle, modélisation et restitution — Binôme B",
-        "author": "[NOM ET PRÉNOM DU STAGIAIRE]",
+    # Livrable commun du §6.1, signé par les deux binômes : la clé `author`
+    # remplace la valeur par défaut, qui ne désigne que le binôme B.
+    "rapport_projet_netqos_ai.md": {
+        "title": "Rapport de projet — NetQoS-AI",
+        "subtitle": "Plateforme intelligente de surveillance et de prévision de la QoS réseau",
+        "author": "Binôme A & Binôme B — ESMT / DETIC",
     },
 }
 
