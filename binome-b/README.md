@@ -33,7 +33,7 @@ python -m src.scripts.make_report
 streamlit run src/dashboard/app.py
 
 # 6. Export Word des livrables       -> reports/docx/*.docx
-python -m src.scripts.export_docx
+python -m src.scripts.export_livrables
 ```
 
 Toutes les commandes se lancent **depuis `binome-b/`** (les modules sont importés
@@ -139,8 +139,8 @@ manuelle. Un `.docx` binaire ne se régénérerait pas et ne se relirait pas dan
 diff Git.
 
 ```bash
-python -m src.scripts.export_docx          # tous les livrables
-python -m src.scripts.export_docx --fichier ../reports/retours_au_binome_a.md
+python -m src.scripts.export_livrables          # tous les livrables
+python -m src.scripts.export_livrables --fichier ../reports/retours_au_binome_a.md
 ```
 
 `reports/docx/` est dans le `.gitignore` : ces fichiers sont des artefacts, à

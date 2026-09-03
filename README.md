@@ -132,6 +132,8 @@ leurs tableaux et leurs figures, ils sont donc lisibles sans rien installer.
 | Notice d'utilisation du tableau de bord | §6.3 | [`binome-b/NOTICE_DASHBOARD.md`](./binome-b/NOTICE_DASHBOARD.md) |
 | Guide de vérification en cinq niveaux | — | [`binome-b/GUIDE_TEST.md`](./binome-b/GUIDE_TEST.md) |
 | Retours techniques du Binôme B au Binôme A | — | [`reports/retours_au_binome_a.md`](./reports/retours_au_binome_a.md) |
+| **Support de soutenance** | §6.1 | [`reports/support_soutenance.md`](./reports/support_soutenance.md) — exporté en `.pptx` |
+| **Déroulé de la démonstration live** | §6.1 | [`reports/deroule_demo.md`](./reports/deroule_demo.md) |
 | Documentation de l'API (OpenAPI) | §6.2 | `http://localhost:8000/docs`, API démarrée |
 
 ### Obtenir les versions Word (.docx)
@@ -142,7 +144,7 @@ matières, tableaux et figures embarquées — par une seule commande :
 ```bash
 cd binome-b
 pip install -r requirements.txt          # si ce n'est pas déjà fait
-python -m src.scripts.export_docx        # -> reports/docx/*.docx
+python -m src.scripts.export_livrables        # -> reports/docx/*.docx
 ```
 
 Prérequis : **pandoc** (`winget install --id JohnMacFarlane.Pandoc` sous Windows,
@@ -152,7 +154,7 @@ affiche la commande d'installation s'il manque.
 Pour n'exporter qu'un document :
 
 ```bash
-python -m src.scripts.export_docx --fichier ../reports/rapport_projet_netqos_ai.md
+python -m src.scripts.export_livrables --fichier ../reports/rapport_projet_netqos_ai.md
 ```
 
 Ces `.docx` ne sont **pas versionnés** (`reports/docx/` est dans le
@@ -180,7 +182,7 @@ citent les chiffres de `reports/metrics/`.
 | **J7** | Contrat d'interface figé + EDA | contrat v1.1 figé le 2026-08-10 · EDA Binôme B produite ([`reports/rapport_eda.md`](./reports/rapport_eda.md)) |
 | **J14** | Pipeline bout-en-bout fonctionnel | pipeline A opérationnel · 4 baselines anomalie et 4 baselines prévision évaluées côté B |
 | **J21** | Intégration A ↔ B (le dashboard lit l'API) | **atteint** — vérifié sur la stack Docker · modèles avancés (autoencodeur, XGBoost) · dashboard à 6 onglets dont un temps réel |
-| **J30** | Plateforme complète, documentée, démontrée | rapport d'évaluation, notice du dashboard, schéma d'architecture et **rapport de projet commun** produits ([`reports/rapport_projet_netqos_ai.md`](./reports/rapport_projet_netqos_ai.md)) · *reste à faire : support de soutenance et déroulé de la démo* |
+| **J30** | Plateforme complète, documentée, démontrée | **livrables complets** : rapport de projet, rapport d'évaluation, analyse exploratoire, notice, schéma d'architecture, support de soutenance et déroulé de la démonstration · *reste à faire : les captures d'écran, et répéter la démo en conditions réelles* |
 
 ## Résultats et démonstration
 
@@ -228,7 +230,11 @@ Procédure de vérification complète, avec les valeurs attendues à chaque éta
 
 ### [À compléter] Captures d'écran et démonstration
 
-*(Semaine 4 : captures des 6 onglets du dashboard, déroulé de la démonstration live)*
+*(Captures des 6 onglets du dashboard, à insérer aux emplacements marqués
+`📷` dans [`reports/support_soutenance.md`](./reports/support_soutenance.md).)*
+
+Le déroulé minuté de la démonstration, avec ses vérifications préalables et ses
+points de repli, est dans [`reports/deroule_demo.md`](./reports/deroule_demo.md).
 
 ## Points ouverts
 

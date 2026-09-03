@@ -221,7 +221,7 @@ def main() -> None:
           f"code en {POLICE_CODE}, langue fr-FR, pied de page paginé")
     print(f"\nGabarit écrit : {GABARIT.relative_to(BINOME_B_DIR.parent)} "
           f"({GABARIT.stat().st_size / 1024:.0f} Ko)")
-    print("Il est utilisé automatiquement par `python -m src.scripts.export_docx`.")
+    print("Il est utilisé automatiquement par `python -m src.scripts.export_livrables`.")
 
 
 if __name__ == "__main__":

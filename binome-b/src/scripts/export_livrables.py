@@ -1,5 +1,6 @@
 """
-Export des livrables Markdown au format Word (.docx).
+Export des livrables Markdown aux formats de remise : Word (.docx) pour les
+documents, PowerPoint (.pptx) pour le support de soutenance.
 
 Le contrat d'interface du Binôme A est un `.docx` : c'est visiblement le format
 attendu pour les documents remis à l'encadrement. Les rapports du Binôme B sont
@@ -16,9 +17,9 @@ Conversion assurée par pandoc, qui préserve les tableaux, les blocs de code et
 les figures (embarquées dans le fichier, donc transportables).
 
 Usage (depuis binome-b/) :
-    python -m src.scripts.export_docx
-    python -m src.scripts.export_docx --fichier ../reports/retours_au_binome_a.md
-    python -m src.scripts.export_docx --sans-toc
+    python -m src.scripts.export_livrables
+    python -m src.scripts.export_livrables --fichier ../reports/retours_au_binome_a.md
+    python -m src.scripts.export_livrables --sans-toc
 """
 
 from __future__ import annotations
@@ -56,6 +57,20 @@ DOCUMENTS = {
         "subtitle": "Plateforme intelligente de surveillance et de prévision de la QoS réseau",
         "author": "Binôme A & Binôme B — ESMT / DETIC",
     },
+    "deroule_demo.md": {
+        "title": "Déroulé de la démonstration live",
+        "subtitle": "NetQoS-AI — Livrable §6.1 — Jalon J30",
+        "author": "Binôme A & Binôme B — ESMT / DETIC",
+    },
+    # Support de soutenance : seul livrable exporté en PowerPoint. Le gabarit
+    # Word et la table des matières ne s'y appliquent pas, et les séparateurs
+    # de diapositives viennent des titres de niveau 1 du Markdown.
+    "support_soutenance.md": {
+        "title": "NetQoS-AI — Soutenance",
+        "subtitle": "Supervision intelligente de la QoS réseau",
+        "author": "Binôme A & Binôme B — ESMT / DETIC",
+        "format": "pptx",
+    },
 }
 
 # Documents de `binome-b/` : chemins relatifs à ce dossier, pas à reports/.
@@ -78,6 +93,12 @@ AUTEUR = "Binôme B — Intelligence artificielle & restitution"
 GABARIT = Path(__file__).resolve().parent.parent.parent / "assets" / "gabarit_netqos.docx"
 
 
+def destination_pour(source: Path, metadonnees: dict) -> Path:
+    """Chemin de sortie, dont l'extension découle du format demandé."""
+    extension = metadonnees.get("format", "docx")
+    return SORTIE_DIR / f"{source.stem}.{extension}"
+
+
 def verifier_pandoc() -> str:
     """Retourne le chemin de pandoc, ou interrompt avec un message utile."""
     chemin = shutil.which("pandoc")
@@ -95,7 +116,8 @@ def verifier_pandoc() -> str:
 def exporter(
     source: Path, destination: Path, metadonnees: dict, avec_toc: bool = True
 ) -> None:
-    """Convertit un fichier Markdown en .docx."""
+    """Convertit un fichier Markdown en .docx ou en .pptx."""
+    est_diapos = metadonnees.get("format") == "pptx"
     commande = [
         "pandoc",
         str(source),
@@ -104,7 +126,10 @@ def exporter(
         # Les chemins d'images des rapports sont relatifs au dossier du document :
         # sans cela, les figures ne seraient pas retrouvées ni embarquées.
         f"--resource-path={source.parent}",
-        "--from=gfm",  # tableaux et blocs de code GitHub-flavored
+        # GFM pour les documents, écrits dans cette variante. Le support de
+        # soutenance a besoin du Markdown de pandoc, seule variante qui
+        # interprète les divs `::: notes` en notes de l'orateur.
+        "--from=markdown" if est_diapos else "--from=gfm",
         "--metadata",
         f"title={metadonnees['title']}",
         "--metadata",
@@ -114,10 +139,16 @@ def exporter(
         "--metadata",
         "lang=fr-FR",
     ]
-    if GABARIT.exists():
-        commande += [f"--reference-doc={GABARIT}"]
-    if avec_toc:
-        commande += ["--toc", "--toc-depth=3"]
+    if est_diapos:
+        # Un titre de niveau 1 ouvre une diapositive : sans cette option, pandoc ne
+        # découpe rien. Le gabarit Word et la table des matières n'ont pas de
+        # sens ici, on ne les passe donc pas.
+        commande += ["--slide-level=1"]
+    else:
+        if GABARIT.exists():
+            commande += [f"--reference-doc={GABARIT}"]
+        if avec_toc:
+            commande += ["--toc", "--toc-depth=3"]
 
     resultat = subprocess.run(commande, capture_output=True, text=True)
     if resultat.returncode != 0:
@@ -129,7 +160,9 @@ def exporter(
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Export des livrables en .docx")
+    parser = argparse.ArgumentParser(
+        description="Export des livrables en .docx et .pptx"
+    )
     parser.add_argument(
         "--fichier",
         type=str,
@@ -155,7 +188,7 @@ def main() -> None:
             "subtitle": "NetQoS-AI — Binôme B",
         }
         print(f"Export vers {SORTIE_DIR} :")
-        exporter(source, SORTIE_DIR / f"{source.stem}.docx", metadonnees, avec_toc)
+        exporter(source, destination_pour(source, metadonnees), metadonnees, avec_toc)
         return
 
     print(f"Export vers {SORTIE_DIR} :")
@@ -164,19 +197,19 @@ def main() -> None:
     for nom, metadonnees in DOCUMENTS.items():
         source = REPORTS_DIR / nom
         if source.exists():
-            exporter(source, SORTIE_DIR / f"{source.stem}.docx", metadonnees, avec_toc)
+            exporter(source, destination_pour(source, metadonnees), metadonnees, avec_toc)
         else:
             print(f"  (absent, ignoré) {nom}")
 
     for nom, metadonnees in DOCUMENTS_BINOME_B.items():
         source = binome_b_dir / nom
         if source.exists():
-            exporter(source, SORTIE_DIR / f"{source.stem}.docx", metadonnees, avec_toc)
+            exporter(source, destination_pour(source, metadonnees), metadonnees, avec_toc)
         else:
             print(f"  (absent, ignoré) {nom}")
 
     print(
-        "\nLe Markdown reste la source de vérité : ces .docx sont des exports.\n"
+        "\nLe Markdown reste la source de vérité : ces fichiers sont des exports.\n"
         "Après toute modification d'un rapport, réexécuter cette commande."
     )
 
