@@ -117,6 +117,57 @@ Document de référence : [`reports/contrat_interface.docx`](./reports/contrat_i
 Résumé technique : API REST sous `/api/v1/`, voir `binome-a/README.md` pour la
 liste complète des endpoints.
 
+## Livrables
+
+Les documents rédigés sont **en Markdown dans le dépôt** : GitHub les rend avec
+leurs tableaux et leurs figures, ils sont donc lisibles sans rien installer.
+
+| Livrable | Fiche | Document |
+|---|---|---|
+| Contrat d'interface (figé au J7) | §6.1 | [`reports/contrat_interface.docx`](./reports/contrat_interface.docx) |
+| Schéma d'architecture annoté | §6.1 · §4.4 | [`reports/architecture_schema.png`](./reports/architecture_schema.png) |
+| **Rapport de projet** | §6.1 | [`reports/rapport_projet_netqos_ai.md`](./reports/rapport_projet_netqos_ai.md) |
+| Rapport d'analyse exploratoire | §6.3 | [`reports/rapport_eda.md`](./reports/rapport_eda.md) |
+| Rapport d'évaluation des modèles | §6.3 | [`reports/rapport_evaluation_modeles.md`](./reports/rapport_evaluation_modeles.md) |
+| Notice d'utilisation du tableau de bord | §6.3 | [`binome-b/NOTICE_DASHBOARD.md`](./binome-b/NOTICE_DASHBOARD.md) |
+| Guide de vérification en cinq niveaux | — | [`binome-b/GUIDE_TEST.md`](./binome-b/GUIDE_TEST.md) |
+| Procédure de démonstration | — | `binome-a/README_DEMO.md` — *annoncé par le Binôme A, pas encore poussé sur le dépôt* |
+| Retours techniques du Binôme B au Binôme A | — | [`reports/retours_au_binome_a.md`](./reports/retours_au_binome_a.md) |
+| Documentation de l'API (OpenAPI) | §6.2 | `http://localhost:8000/docs`, API démarrée |
+
+### Obtenir les versions Word (.docx)
+
+Les six documents Markdown s'exportent en `.docx` — page de garde, table des
+matières, tableaux et figures embarquées — par une seule commande :
+
+```bash
+cd binome-b
+pip install -r requirements.txt          # si ce n'est pas déjà fait
+python -m src.scripts.export_docx        # -> reports/docx/*.docx
+```
+
+Prérequis : **pandoc** (`winget install --id JohnMacFarlane.Pandoc` sous Windows,
+sinon https://pandoc.org/installing.html). Le script vérifie sa présence et
+affiche la commande d'installation s'il manque.
+
+Pour n'exporter qu'un document :
+
+```bash
+python -m src.scripts.export_docx --fichier ../reports/rapport_projet_netqos_ai.md
+```
+
+Ces `.docx` ne sont **pas versionnés** (`reports/docx/` est dans le
+`.gitignore`) : le Markdown est la source, le Word en est un artefact
+reproductible. Un binaire versionné peut se retrouver en retard sur sa source
+sans que rien ne le signale, puisqu'il ne se relit pas dans un diff — le produire
+au moment de la remise garantit qu'il est à jour. Le style suit le contrat
+d'interface, via un gabarit lui aussi reconstruit par script
+(`binome-b/src/scripts/build_docx_template.py`).
+
+Si les modèles ont été réentraînés, régénérer d'abord les rapports
+(`python -m src.scripts.make_report`) puis relancer l'export : les rapports
+citent les chiffres de `reports/metrics/`.
+
 ## Convention de travail Git
 
 - Branches : `binome-a/nom-fonctionnalite` et `binome-b/nom-fonctionnalite`
