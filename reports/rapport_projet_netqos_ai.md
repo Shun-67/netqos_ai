@@ -619,8 +619,7 @@ a rédigé un **guide opérationnel** (`README_DEMO.md`) formalisant la procédu
 d'arrêt et de relance, la récupération du mot de passe administrateur généré par
 Airflow, la liste des vérifications de bon fonctionnement à effectuer avant une
 démonstration, et une procédure de secours pour repeupler la base. Ce document
-transforme une connaissance acquise en débogage en un actif réutilisable ; il
-reste à le pousser sur le dépôt, où il n'apparaît pas encore.
+transforme une connaissance acquise en débogage en un actif réutilisable.
 
 **Binôme B.** Une revue d'avancement a posé une question qui a orienté toute la
 semaine : les modèles ont-ils été optimisés, et si le modèle retenu n'atteint pas
@@ -1594,6 +1593,7 @@ netqos_ai/
 │   ├── airflow/
 │   │   ├── Dockerfile
 │   │   └── dags/netqos_pipeline_dag.py
+│   ├── README_DEMO.md            # procédure de démonstration
 │   └── src/
 │       ├── db.py                 # moteur + upsert mutualisé
 │       ├── generator/synthetic_generator.py
@@ -1819,7 +1819,7 @@ NETQOS_DATA_SOURCE=api API_BASE_URL=http://localhost:8010/api/v1 \
 ```
 
 Procédure de vérification détaillée, avec les valeurs attendues à chaque étape :
-`binome-b/GUIDE_TEST.md`.
+`binome-b/GUIDE_TEST.md`. Procédure de démonstration : `binome-a/README_DEMO.md`.
 
 ### Annexe G — Documents de référence
 
@@ -1832,7 +1832,7 @@ Procédure de vérification détaillée, avec les valeurs attendues à chaque é
 | `reports/retours_au_binome_a.md` | Six points relevés pendant l'intégration, avec diagnostic reproductible |
 | `binome-b/NOTICE_DASHBOARD.md` | Notice d'utilisation du tableau de bord |
 | `binome-b/GUIDE_TEST.md` | Vérification en cinq niveaux, avec valeurs attendues |
-| `binome-a/README_DEMO.md` | Procédure de démonstration et de remise en route — rédigée par le Binôme A, à pousser sur le dépôt |
+| `binome-a/README_DEMO.md` | Procédure de démonstration et de remise en route |
 
 ### Annexe H — Glossaire
 
