@@ -193,7 +193,7 @@ section 5 proviennent d'un écart à cette règle.
 | **J7** | Contrat d'interface figé | **Atteint.** Contrat v1.1 gelé le 2026-08-10. Dictionnaire de données, zone brute et premier script d'ingestion côté A ; analyse exploratoire et cadrage des modèles côté B. |
 | **J14** | Pipeline bout-en-bout fonctionnel | **Atteint.** Chaîne ingestion → nettoyage → caractéristiques validée sur 14 jours et 5 cellules côté A ; protocole d'évaluation et huit baselines évaluées côté B. |
 | **J21** | Intégration A ↔ B (le dashboard lit l'API) | **Atteint**, après résolution de quatre défauts d'intégration (§5.2, §5.4, §5.5). Vérifié sur la stack Docker complète, flux quasi temps réel inclus. |
-| **J30** | Plateforme complète, documentée, démontrée | **Atteint** pour la plateforme et la documentation. Reste le support de soutenance et le déroulé de la démonstration live. |
+| **J30** | Plateforme complète, documentée, démontrée | **Atteint.** Plateforme démarrable en une commande, l'ensemble des livrables du §6 produits, support de soutenance et déroulé de démonstration inclus. |
 
 ### 1.5. Synthèse des résultats
 
@@ -639,8 +639,9 @@ modèles (695 lignes, six figures), notice d'utilisation du tableau de bord, gui
 de test en cinq niveaux, document de retours au Binôme A, schéma d'architecture
 généré, et le présent rapport.
 
-**Jalon J30.** La plateforme est complète et démontrable. Reste le support de
-soutenance et le déroulé de la démonstration.
+**Jalon J30.** La plateforme est complète et démontrable, et l'ensemble des
+livrables du §6 de la fiche est produit — support de soutenance et déroulé
+minuté de la démonstration compris.
 
 ---
 
@@ -1824,6 +1825,8 @@ Procédure de vérification détaillée, avec les valeurs attendues à chaque é
 | `reports/retours_au_binome_a.md` | Six points relevés pendant l'intégration, avec diagnostic reproductible |
 | `binome-b/NOTICE_DASHBOARD.md` | Notice d'utilisation du tableau de bord |
 | `binome-b/GUIDE_TEST.md` | Vérification en cinq niveaux, avec valeurs attendues |
+| `reports/support_soutenance.md` | Support de soutenance — 31 diapositives, exporté en `.pptx` |
+| `reports/deroule_demo.md` | Déroulé minuté de la démonstration, vérifications préalables et points de repli |
 
 ### Annexe H — Glossaire
 

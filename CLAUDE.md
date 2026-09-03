@@ -63,7 +63,7 @@ python -m src.scripts.train_anomaly     # -> reports/metrics/anomalie_*
 python -m src.scripts.train_forecast    # -> reports/metrics/prevision_* (~15 min avec ARIMA)
 python -m src.scripts.make_report       # -> reports/rapport_evaluation_modeles.md
 python -m src.scripts.make_samples      # -> binome-b/data/samples/*.csv
-python -m src.scripts.export_docx       # -> reports/docx/*.docx (non versionné ; nécessite pandoc)
+python -m src.scripts.export_livrables       # -> reports/docx/*.docx (non versionné ; nécessite pandoc)
 python -m src.scripts.make_architecture  # -> reports/architecture_schema.png (livrable §4.4)
 python -m src.scripts.build_docx_template  # reconstruit binome-b/assets/gabarit_netqos.docx
 streamlit run src/dashboard/app.py      # -> http://localhost:8501
@@ -125,7 +125,7 @@ Branches nommées `binome-a/<fonctionnalité>` ou `binome-b/<fonctionnalité>`, 
 | J7  | Contrat d'interface figé + EDA | fait (contrat v1.1 ; `reports/rapport_eda.md`) |
 | J14 | Baselines anomalie et prévision | fait (4 détecteurs, 4 prévisionnistes, protocole d'évaluation) |
 | J21 | Modèles avancés + dashboard | fait (autoencodeur, XGBoost, dashboard 6 onglets, Airflow, intégration A ↔ B vérifiée) |
-| J30 | Soutenance finale | rapports, schéma d'architecture et **rapport de projet commun** (`reports/rapport_projet_netqos_ai.md`) produits ; **reste le support de soutenance et le déroulé de la démo** |
+| J30 | Soutenance finale | **tous les livrables du §6 sont produits**, support de soutenance (`reports/support_soutenance.md`, exporté en .pptx) et déroulé de démo (`reports/deroule_demo.md`) inclus ; reste les captures d'écran et une répétition en conditions réelles |
 
 Côté binôme B, tout le code est implémenté : `src/models/anomaly.py` (seuils du contrat, Isolation Forest, DBSCAN, autoencodeur), `src/models/forecast.py` (persistance, moyenne mobile, naïf saisonnier, ARIMA, XGBoost multi-horizon), `src/models/qos_state.py`, et `src/dashboard/app.py` (6 onglets, dont un temps réel par `st.fragment`). Prophet et LSTM ont été **écartés par choix de périmètre**, documenté au §4 de `reports/rapport_evaluation_modeles.md` — ne pas les réintroduire sans acter ce changement.
 
