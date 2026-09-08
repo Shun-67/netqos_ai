@@ -1,0 +1,24 @@
+{
+  "sonde": "latency@30min",
+  "hyperparametres_actuels": {
+    "max_depth": 6,
+    "learning_rate": 0.05,
+    "n_estimators": 400,
+    "min_child_weight": 1,
+    "reg_lambda": 1.0
+  },
+  "hyperparametres_retenus": {
+    "max_depth": 4,
+    "learning_rate": 0.05,
+    "n_estimators": 400,
+    "min_child_weight": 1,
+    "reg_lambda": 1.0
+  },
+  "mae_validation_actuelle": 1.0439,
+  "mae_validation_optimisee": 1.03979,
+  "gain_validation_sonde_pct": 0.39,
+  "gain_moyen_test_par_configuration": {
+    "actuelle": 14.85,
+    "optimisée": 15.08
+  }
+}

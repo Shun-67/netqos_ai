@@ -551,16 +551,20 @@ Demandes de révision, par ordre de priorité :
 4. **Mise à jour du §5 de `data_dictionary.md`** — la liste d'endpoints y figurant
    (`/kpi/raw`, `/kpi/clean`, `/stream/latest`) ne correspond plus à l'API v1.1
    réellement servie. Le document du contrat doit refléter l'implémentation.
-5. **Pipeline non idempotent — vérifié sur la stack Docker.** `clean_prepare` et
-   `build_features` relisent la table amont en entier et insèrent en `append` sur
-   des tables à clé primaire `(ts, cell_id)`. La seconde exécution de
-   `run_pipeline` échoue sur
-   `psycopg2.errors.UniqueViolation: duplicate key value violates unique
-   constraint "4_clean_kpi_measurements_pkey"`. Les données ne sont pas corrompues
-   (la transaction est annulée), mais **le rafraîchissement périodique est
-   impossible** : le DAG Airflow, planifié toutes les 15 minutes, échouera à chaque
-   exécution après la première. Le paramètre `since` existe dans les deux fonctions
-   mais n'est jamais transmis, ni par `run_pipeline.py` ni par le DAG.
+5. **Pipeline non incrémental** — l'idempotence, elle, est réglée. Nous avions
+   signalé que `clean_prepare` et `build_features` inséraient en `append` sur des
+   tables à clé primaire `(ts, cell_id)`, ce qui faisait échouer toute seconde
+   exécution sur `UniqueViolation` et empêchait le DAG Airflow de se rafraîchir.
+   Le Binôme A a corrigé le point en routant les deux écritures par
+   `db.upsert_on_conflict` (`ON CONFLICT DO UPDATE`). **Vérifié sur la stack** :
+   deux exécutions consécutives de `run_pipeline` réussissent et les comptages
+   restent stables. La réserve est levée.
+
+   Reste un point d'efficacité : le paramètre `since` existe dans les deux
+   fonctions mais n'est toujours transmis ni par `run_pipeline.py` ni par le DAG.
+   Chaque exécution relit et réécrit donc l'intégralité de l'amont — environ trois
+   minutes pour 100 000 lignes, toutes les quinze minutes dans Airflow. C'est
+   correct mais coûteux, et cela ne tiendra pas à volume plus élevé.
 6. **`docker-compose.yml` était absent du dépôt** — livrable commun attendu au §6.1
    (« démarrable en une commande ») et référencé par les trois README ainsi que par
    le Dockerfile Airflow. Aucune commande de démarrage documentée ne fonctionnait,

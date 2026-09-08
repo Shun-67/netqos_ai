@@ -1,8 +1,7 @@
 # NetQoS-AI
 
-> **Brouillon initial — à compléter et valider ensemble (Binôme A + Binôme B)
-> avant de le considérer comme définitif.** Les sections marquées `[À compléter]`
-> restent à rédiger collectivement.
+> Les sections marquées `[À compléter]` restent à produire : il s'agit des
+> captures d'écran de la démonstration (semaine 4).
 
 Plateforme intelligente de surveillance et de prévision de la qualité de
 service réseau. Projet ESMT / DETIC — Ingénierie des Données et Intelligence
@@ -17,10 +16,32 @@ Artificielle, année académique 2025-2026.
 
 Encadrant : Prof. Boudal NIANG.
 
-## [À compléter] Présentation du projet
+## Présentation du projet
 
-*(2-3 paragraphes : contexte QoS, objectif de la plateforme, ce qui la rend
-pertinente — à rédiger ensemble à partir de la fiche de projet)*
+La qualité de service est un enjeu central pour tout opérateur de réseau : une
+dégradation non détectée à temps se traduit par une expérience utilisateur
+dégradée et par un risque sur les engagements de niveau de service. Les réseaux
+produisent un volume massif d'indicateurs horodatés, mais ils sont le plus
+souvent observés *a posteriori* plutôt que transformés en capacité
+d'anticipation.
+
+La supervision traditionnelle repose sur des seuils fixes, dont ce projet a
+mesuré les deux limites plutôt que de les postuler. Un seuil fixe ignore la
+variabilité normale du trafic — une charge à 90 % est banale à l'heure de pointe
+et anormale à quatre heures du matin. Et il ne détecte que les anomalies
+d'amplitude, pas celles de forme. Chiffré sur nos données : les seuils du
+contrat classent « critique » **42,5 % des instants pourtant normaux**, tout en
+laissant **14,2 % des anomalies réelles** sous leur radar.
+
+NetQoS-AI dépasse cette limite en combinant un pipeline de données
+industrialisé (Binôme A) avec des méthodes d'apprentissage évaluées selon un
+protocole à l'épreuve de la fuite de données (Binôme B), restituées dans un
+tableau de bord destiné à un exploitant réseau. Le détecteur retenu multiplie
+par douze le F1 des seuils fixes et divise leurs fausses alertes par trente,
+**sans jamais voir une étiquette d'anomalie**.
+
+Présentation complète — contexte, architecture, choix techniques, résultats,
+limites et perspectives : [`reports/rapport_projet_netqos_ai.md`](./reports/rapport_projet_netqos_ai.md).
 
 ## Démarrage rapide
 
@@ -63,14 +84,30 @@ Vérifications :
 netqos-ai/
 ├── binome-a/              # Collecte, nettoyage, stockage, API (voir binome-a/README.md)
 ├── binome-b/               # Modèles IA, dashboard (voir binome-b/README.md)
-├── reports/                 # Livrables communs (contrat d'interface, schéma d'architecture, rapport)
+├── reports/                 # Livrables communs (contrat d'interface, schéma d'architecture, rapport de projet)
 ├── docker-compose.yml        # Lance toute la stack en une commande
 ├── .env.example
 └── .gitignore
 ```
 
-[À compléter] Schéma d'architecture en 6 couches (voir `reports/architecture_schema.png`,
-à produire conjointement — cf. cahier des charges partie 4.4).
+### Schéma d'architecture
+
+![Architecture en six couches](reports/architecture_schema.png)
+
+Les six couches du §4.1 du cahier des charges, les flux de données entre elles, et
+la frontière A ↔ B matérialisée par l'API — les trois éléments exigés au §4.4.
+
+Le schéma est **généré par script** (`binome-b/src/scripts/make_architecture.py`)
+et non dessiné : chaque libellé porte le nom réel d'un fichier ou d'une table du
+dépôt, il se régénère si l'architecture évolue, et il se relit dans un diff.
+
+Deux éléments méritent l'attention à la lecture :
+
+- le **chemin isolé de `is_anomaly`** (flèche rouge en tirets). La vérité terrain
+  n'existe que dans la table brute et n'est exposée que par `/eval/labels`. C'est
+  ce qui garantit que la détection d'anomalies reste non supervisée ;
+- la **frontière A ↔ B**, franchie uniquement en HTTP sur `/api/v1`. Aucun accès
+  SQL ni import de code ne la traverse.
 
 ## Contrat d'interface
 
@@ -79,6 +116,58 @@ Document de référence : [`reports/contrat_interface.docx`](./reports/contrat_i
 
 Résumé technique : API REST sous `/api/v1/`, voir `binome-a/README.md` pour la
 liste complète des endpoints.
+
+## Livrables
+
+Les documents rédigés sont **en Markdown dans le dépôt** : GitHub les rend avec
+leurs tableaux et leurs figures, ils sont donc lisibles sans rien installer.
+
+| Livrable | Fiche | Document |
+|---|---|---|
+| Contrat d'interface (figé au J7) | §6.1 | [`reports/contrat_interface.docx`](./reports/contrat_interface.docx) |
+| Schéma d'architecture annoté | §6.1 · §4.4 | [`reports/architecture_schema.png`](./reports/architecture_schema.png) |
+| **Rapport de projet** | §6.1 | [`reports/rapport_projet_netqos_ai.md`](./reports/rapport_projet_netqos_ai.md) |
+| Rapport d'analyse exploratoire | §6.3 | [`reports/rapport_eda.md`](./reports/rapport_eda.md) |
+| Rapport d'évaluation des modèles | §6.3 | [`reports/rapport_evaluation_modeles.md`](./reports/rapport_evaluation_modeles.md) |
+| Notice d'utilisation du tableau de bord | §6.3 | [`binome-b/NOTICE_DASHBOARD.md`](./binome-b/NOTICE_DASHBOARD.md) |
+| Guide de vérification en cinq niveaux | — | [`binome-b/GUIDE_TEST.md`](./binome-b/GUIDE_TEST.md) |
+| Retours techniques du Binôme B au Binôme A | — | [`reports/retours_au_binome_a.md`](./reports/retours_au_binome_a.md) |
+| **Support de soutenance** | §6.1 | [`reports/support_soutenance.md`](./reports/support_soutenance.md) — exporté en `.pptx` |
+| **Déroulé de la démonstration live** | §6.1 | [`reports/deroule_demo.md`](./reports/deroule_demo.md) |
+| Documentation de l'API (OpenAPI) | §6.2 | `http://localhost:8000/docs`, API démarrée |
+
+### Obtenir les versions Word (.docx)
+
+Les six documents Markdown s'exportent en `.docx` — page de garde, table des
+matières, tableaux et figures embarquées — par une seule commande :
+
+```bash
+cd binome-b
+pip install -r requirements.txt          # si ce n'est pas déjà fait
+python -m src.scripts.export_livrables        # -> reports/docx/*.docx
+```
+
+Prérequis : **pandoc** (`winget install --id JohnMacFarlane.Pandoc` sous Windows,
+sinon https://pandoc.org/installing.html). Le script vérifie sa présence et
+affiche la commande d'installation s'il manque.
+
+Pour n'exporter qu'un document :
+
+```bash
+python -m src.scripts.export_livrables --fichier ../reports/rapport_projet_netqos_ai.md
+```
+
+Ces `.docx` ne sont **pas versionnés** (`reports/docx/` est dans le
+`.gitignore`) : le Markdown est la source, le Word en est un artefact
+reproductible. Un binaire versionné peut se retrouver en retard sur sa source
+sans que rien ne le signale, puisqu'il ne se relit pas dans un diff — le produire
+au moment de la remise garantit qu'il est à jour. Le style suit le contrat
+d'interface, via un gabarit lui aussi reconstruit par script
+(`binome-b/src/scripts/build_docx_template.py`).
+
+Si les modèles ont été réentraînés, régénérer d'abord les rapports
+(`python -m src.scripts.make_report`) puis relancer l'export : les rapports
+citent les chiffres de `reports/metrics/`.
 
 ## Convention de travail Git
 
@@ -93,7 +182,7 @@ liste complète des endpoints.
 | **J7** | Contrat d'interface figé + EDA | contrat v1.1 figé le 2026-08-10 · EDA Binôme B produite ([`reports/rapport_eda.md`](./reports/rapport_eda.md)) |
 | **J14** | Pipeline bout-en-bout fonctionnel | pipeline A opérationnel · 4 baselines anomalie et 4 baselines prévision évaluées côté B |
 | **J21** | Intégration A ↔ B (le dashboard lit l'API) | **atteint** — vérifié sur la stack Docker · modèles avancés (autoencodeur, XGBoost) · dashboard à 6 onglets dont un temps réel |
-| **J30** | Plateforme complète, documentée, démontrée | rapport d'évaluation et notice du dashboard produits · *reste à faire : schéma d'architecture, rapport de projet, support de soutenance* |
+| **J30** | Plateforme complète, documentée, démontrée | **livrables complets** : rapport de projet, rapport d'évaluation, analyse exploratoire, notice, schéma d'architecture, support de soutenance et déroulé de la démonstration · *reste à faire : les captures d'écran, et répéter la démo en conditions réelles* |
 
 ## Résultats et démonstration
 
@@ -101,9 +190,9 @@ liste complète des endpoints.
 
 | Fonction | Modèle retenu | Performance sur le segment de test |
 |---|---|---|
-| Détection d'anomalies | Isolation Forest | F1 = 0,653 · PR-AUC = 0,614 · 0,02 fausse alerte/h · 9/9 épisodes détectés |
-| Prévision des KPI | XGBoost multi-horizon | MAE inférieure de 9,8 % / 14,3 % / 21,2 % à la persistance (5 / 15 / 30 min) |
-| État QoS annoncé | seuils du contrat appliqués aux prévisions | ≈ 83 % d'exactitude de l'état, de 5 à 30 min |
+| Détection d'anomalies | Isolation Forest (2 000 arbres) | F1 = 0,631 · PR-AUC = 0,586 · 0,018 fausse alerte/h · 9/9 épisodes détectés |
+| Prévision des KPI | XGBoost multi-horizon | MAE inférieure de 10,0 % / 14,6 % / 20,7 % à la persistance (5 / 15 / 30 min) |
+| État QoS annoncé | seuils du contrat appliqués aux prévisions | ≈ 82 % d'exactitude de l'état, de 5 à 30 min |
 
 Protocole d'évaluation, comparaison baseline / modèle avancé et analyse
 d'erreurs : [`reports/rapport_evaluation_modeles.md`](./reports/rapport_evaluation_modeles.md).
@@ -116,7 +205,15 @@ instructifs que les chiffres :
   pas déployé ;
 - en prévision, le **choix de la fonction de perte a pesé plus lourd que le
   choix du modèle** : avec l'objectif quadratique par défaut, XGBoost était
-  battu par la persistance, à cause des valeurs extrêmes de `packet_loss`.
+  battu par la persistance, à cause des valeurs extrêmes de `packet_loss` ;
+- la campagne d'optimisation a montré qu'**il n'y avait quasiment pas de gain à
+  prendre sur les hyperparamètres**, et qu'un « gain » apparent de +3,9 % en
+  validation n'était que du bruit — la seule graine aléatoire faisait varier la
+  PR-AUC trois fois plus. Le seul progrès fiable a consisté à *réduire cette
+  variance* (2 000 arbres au lieu de 300), et un oracle supervisé chiffre à
+  0,905 de PR-AUC le plafond qu'atteindrait un modèle autorisé à voir les
+  étiquettes — soit **le prix mesuré de la contrainte non supervisée** imposée
+  par le §2.2 du cahier des charges.
 
 ### Reproduire les résultats
 
@@ -133,7 +230,11 @@ Procédure de vérification complète, avec les valeurs attendues à chaque éta
 
 ### [À compléter] Captures d'écran et démonstration
 
-*(Semaine 4 : captures des 6 onglets du dashboard, déroulé de la démonstration live)*
+*(Captures des 6 onglets du dashboard, à insérer aux emplacements marqués
+`📷` dans [`reports/support_soutenance.md`](./reports/support_soutenance.md).)*
+
+Le déroulé minuté de la démonstration, avec ses vérifications préalables et ses
+points de repli, est dans [`reports/deroule_demo.md`](./reports/deroule_demo.md).
 
 ## Points ouverts
 

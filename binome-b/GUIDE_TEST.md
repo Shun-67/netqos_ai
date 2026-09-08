@@ -12,7 +12,7 @@ Sauf mention contraire, toutes les commandes se lancent **depuis `binome-b/`**.
 | 1 | Les livrables existent et sont cohérents | 5 min | non |
 | 2 | Le dashboard s'affiche et réagit | 5 min | non |
 | 3 | L'intégration A ↔ B (jalon J21) | 10 min | oui |
-| 4 | La rigueur du protocole (tests négatifs) | 5 min | non |
+| 4 | La suite unitaire (60 tests) et les tests négatifs | 5 min | non |
 | 5 | Reproduction complète depuis zéro | ~45 min | non |
 
 ---
@@ -112,7 +112,7 @@ print(o[['detecteur','precision','rappel','f1','pr_auc','fausses_alertes_par_heu
 | detecteur | precision | rappel | f1 | pr_auc | fausses alertes/h |
 |---|---|---|---|---|---|
 | seuils_contrat | 0,026 | 0,703 | 0,051 | 0,023 | 0,55 |
-| isolation_forest | 0,622 | 0,657 | **0,639** | **0,612** | **0,018** |
+| isolation_forest | 0,616 | 0,647 | **0,631** | **0,586** | **0,018** |
 | dbscan | 0,277 | 0,187 | 0,223 | 0,391 | 0,018 |
 | autoencodeur | 0,383 | 0,397 | 0,390 | 0,363 | 0,003 |
 
@@ -136,7 +136,7 @@ horizon_min             5      15     30
 moyenne_mobile_15m    1.27   1.17   1.53
 naif_saisonnier_24h -34.24 -24.67 -13.80
 persistance          -0.01   0.00  -0.00
-xgboost               9.68  14.40  20.48
+xgboost               9.99  14.59  20.66
 ```
 
 Le point à vérifier : **le gain de XGBoost croît avec l'horizon**. S'il décroissait,
@@ -293,7 +293,7 @@ NETQOS_DATA_SOURCE=api API_BASE_URL=http://localhost:8010/api/v1 python -m src.s
 ```
 
 **Attendu :** exactement les valeurs du niveau 1.3 (`isolation_forest` :
-`P=0.622 R=0.657 F1=0.639`), et une prévalence non nulle sur les trois segments
+`P=0.616 R=0.647 F1=0.631`), et une prévalence non nulle sur les trois segments
 (de l'ordre de 1,3 %).
 
 > Si la prévalence affiche **0,00 %**, c'est que le contournement du défaut
@@ -363,10 +363,39 @@ cd .. && docker compose stop            # conserve la base
 
 ---
 
-## Niveau 4 — Tests négatifs : ce qui **doit** échouer (5 min)
+## Niveau 4 — Suite unitaire et tests négatifs (5 min)
 
-Ces contrôles vérifient la rigueur du protocole. Un test qui ne lève pas
-d'exception ici est un échec.
+### 4.1 La suite pytest
+
+```bash
+cd binome-b
+python -m pytest
+```
+
+**Attendu :** `60 passed` en environ 2 secondes, sans base de données ni API —
+les tests ne manipulent que des DataFrames construits à la main.
+
+Ce qu'ils verrouillent, et pourquoi :
+
+| Fichier | Invariant vérifié |
+|---|---|
+| `tests/test_garde_fous.py` | `is_anomaly` refusée comme feature ; étiquettes désalignées refusées ; continuité de l'encodage cyclique entre 23 h et 0 h |
+| `tests/test_protocole_temporel.py` | purge effective entre segments ; segments disjoints ; **cibles de prévision alignées par durée et non par position** |
+| `tests/test_metriques_et_qos.py` | découpage en épisodes ; délai de détection ; règle du pire KPI ; sMAPE borné là où le MAPE explose |
+| `tests/test_detecteurs.py` | score croissant avec l'atypicité pour les quatre détecteurs ; normalisation par cellule effective |
+
+Deux de ces invariants ont réellement été violés en cours de projet **sans lever
+la moindre erreur** : le désalignement des horodatages de `/eval/labels`, qui
+ramenait la prévalence à 0 %, et l'alignement des cibles de prévision. C'est la
+raison d'être de cette suite.
+
+`pytest.ini` transforme les `FutureWarning` en erreurs : une dépréciation pandas
+fait échouer la suite au lieu de s'accumuler silencieusement.
+
+### 4.2 Tests négatifs à la main
+
+Ces contrôles reprennent les mêmes garde-fous en dehors de pytest, pour pouvoir
+les montrer en soutenance. Un test qui ne lève pas d'exception ici est un échec.
 
 ```bash
 cd binome-b
@@ -399,7 +428,7 @@ except LabelAlignmentError: print('OK 3 : etiquettes vides refusees')
 **Attendu :** trois lignes `OK`. Le test 2 est le plus important : c'est le
 garde-fou qui empêche qu'une évaluation entière retombe silencieusement à zéro.
 
-### Le découpage temporel ne contient aucune fuite
+### 4.3 Le découpage temporel ne contient aucune fuite
 
 ```bash
 python -c "
@@ -421,7 +450,7 @@ fenêtre glissante de 60 min chevauche deux segments. Les horodatages exacts
 dépendent de la date de génération du jeu de données ; c'est l'écart d'au moins
 61 minutes qui doit être vérifié, pas les valeurs elles-mêmes.
 
-### L'API imposée mais absente doit échouer explicitement
+### 4.4 L'API imposée mais absente doit échouer explicitement
 
 ```bash
 NETQOS_DATA_SOURCE=api API_BASE_URL=http://localhost:9999/api/v1 python -c "
@@ -454,6 +483,17 @@ python -m src.scripts.make_report       # instantané
 python -m src.scripts.make_samples      # instantané
 ```
 
+La campagne d'optimisation est reproductible séparément. Elle n'est pas nécessaire
+pour obtenir les livrables, mais elle produit les tableaux du §2.7 du rapport
+d'évaluation — dont la borne supérieure supervisée, qui justifie chiffres en main
+le niveau de performance atteint :
+
+```bash
+python -m src.scripts.tune_anomaly     # ~12 min : grille, variance, borne oracle
+python -m src.scripts.tune_forecast    # ~15 min : grille XGBoost + vérification
+python -m src.scripts.make_report      # intègre les résultats au rapport
+```
+
 **Attendu :** les mêmes chiffres qu'au niveau 1.3 — la graine aléatoire est fixée
 (`RANDOM_STATE = 42` dans `src/config.py`), donc les résultats sont reproductibles
 à l'identique.
@@ -473,7 +513,10 @@ Contrôles pendant l'exécution :
 ## Récapitulatif des valeurs de référence
 
 > Ces valeurs correspondent au jeu `binome-a/data/raw/historical_kpi.csv` versionné
-> dans le dépôt. Le générateur du Binôme A ancre l'historique sur la date
+> dans le dépôt. Celles du détecteur d'anomalies sont désormais **stables à
+> ±0,005 de PR-AUC** : l'Isolation Forest utilise 2 000 arbres, contre 300
+> auparavant, ce qui a divisé par six la dispersion due à la graine aléatoire
+> (voir §2.7 du rapport d'évaluation). Le générateur du Binôme A ancre l'historique sur la date
 > d'exécution : **régénérer les données déplace la fenêtre temporelle** et fait
 > bouger les métriques de quelques centièmes, sans changer les conclusions. Après
 > une régénération, relancer la chaîne du niveau 5 et actualiser ce tableau.
@@ -488,13 +531,14 @@ Contrôles pendant l'exécution :
 | Taux d'anomalie global | 1,2778 % |
 | Découpage train / val / test | 60 450 / 19 850 / 19 850 |
 | Purge entre segments | ≥ 60 min |
-| Isolation Forest — F1 / PR-AUC | 0,639 / 0,612 |
+| Isolation Forest — F1 / PR-AUC | 0,631 / 0,586 |
 | Isolation Forest — fausses alertes | 0,018 / h |
 | Épisodes détectés | 9 / 9 |
-| XGBoost — gain MAE (5/15/30 min) | +9,7 % / +14,4 % / +20,5 % |
+| XGBoost — gain MAE (5/15/30 min) | +10,0 % / +14,6 % / +20,7 % |
 | Exactitude de l'état QoS annoncé | ≈ 82 % |
 | Écart API ↔ CSV local | 0,0000000000 |
 | Dashboard | 6 onglets, 0 exception |
+| Suite unitaire | 60 tests, ~2 s |
 
 > **Ces valeurs supposent des données batch uniquement.** Si le simulateur de flux
 > tourne (§3.6), il insère des lignes dans `raw_kpi_measurements` : les chiffres
@@ -518,6 +562,6 @@ Binôme A (détail dans `reports/rapport_eda.md` §8) :
 | Observation | Explication |
 |---|---|
 | Beaucoup de vignettes 🔴 dans le dashboard | Les seuils v1.1 classent 42,9 % du temps en « critique ». Recalibrage v1.2 demandé. |
-| `run_pipeline` échoue à la 2ᵉ exécution (`UniqueViolation`) | Pipeline non idempotent. Les données restent intactes ; le DAG Airflow échoue à chaque tick après le premier. |
+| `run_pipeline` met ~3 min même sans données nouvelles | Le pipeline relit tout l'amont : `since` n'est pas transmis. Attendu, non bloquant. L'idempotence, elle, est corrigée — deux exécutions consécutives réussissent. |
 | `/eval/labels` renvoie des `ts` en `:41` secondes | Horodatages non rééchantillonnés. Contourné dans `loader.load_labels()`. |
 | `docker compose up` échoue sur « port already allocated » | 5432 et 8000 occupés sur cette machine → surcharger `POSTGRES_HOST_PORT`, `API_PORT`, `DASHBOARD_PORT`. |

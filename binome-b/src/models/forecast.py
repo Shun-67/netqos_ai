@@ -350,16 +350,29 @@ class XGBForecaster(BaseForecaster):
     # segment de validation.
     CANDIDATE_OBJECTIVES = ["reg:squarederror", "reg:absoluteerror"]
 
+    # `max_depth = 4` et non 6 : retenu par la campagne d'optimisation
+    # (`src/scripts/tune_forecast.py`). Le gain est modeste — +0,39 % de MAE sur
+    # la sonde de validation — mais il se confirme sur le test **aux trois
+    # horizons** (+0,29, +0,20 et +0,18 point de gain sur la persistance), ce qui
+    # le distingue d'une fluctuation. Des arbres moins profonds entraînent en
+    # outre 35 % plus vite. Au-delà de la profondeur, la grille explorée n'a rien
+    # donné : l'écart entre la meilleure et la pire configuration n'est que de
+    # 2,6 % de MAE. Ce modèle est donc proche de son plafond sur ces features.
     def __init__(
         self,
         n_estimators: int = 400,
-        max_depth: int = 6,
+        max_depth: int = 4,
         learning_rate: float = 0.05,
         subsample: float = 0.8,
         colsample_bytree: float = 0.8,
         objective: Optional[str] = None,
         random_state: int = RANDOM_STATE,
+        **extra_params,
     ):
+        # `extra_params` laisse passer les hyperparamètres de régularisation
+        # (min_child_weight, reg_lambda, ...) sans figer la signature : c'est ce
+        # qui permet au script d'optimisation de balayer une grille sans modifier
+        # cette classe.
         self.params = dict(
             n_estimators=n_estimators,
             max_depth=max_depth,
@@ -369,6 +382,7 @@ class XGBForecaster(BaseForecaster):
             random_state=random_state,
             n_jobs=-1,
             tree_method="hist",
+            **extra_params,
         )
         # objective=None -> sélection sur validation ; sinon objectif imposé.
         self.objective = objective
