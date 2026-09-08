@@ -31,6 +31,9 @@ python -m src.scripts.make_report
 
 # 5. Dashboard                       -> http://localhost:8501
 streamlit run src/dashboard/app.py
+
+# 6. Export Word des livrables       -> reports/docx/*.docx
+python -m src.scripts.export_livrables
 ```
 
 Toutes les commandes se lancent **depuis `binome-b/`** (les modules sont importés
@@ -38,7 +41,11 @@ en paquet : `python -m src.scripts.…`).
 
 Pour vérifier que tout fonctionne, suivre [`GUIDE_TEST.md`](GUIDE_TEST.md) :
 procédure en cinq niveaux (2 min à 45 min) avec les valeurs attendues à chaque
-étape.
+étape. La suite unitaire, elle, tourne en deux secondes :
+
+```bash
+python -m pytest            # 60 tests, ni base ni API requises
+```
 
 Depuis la racine du dépôt, la stack complète démarre en une commande :
 
@@ -89,7 +96,10 @@ python ../binome-a/src/generator/synthetic_generator.py \
 binome-b/
 ├── Dockerfile                      # image du dashboard
 ├── requirements.txt
+├── pytest.ini
 ├── NOTICE_DASHBOARD.md             # notice d'utilisation (livrable §6.3)
+├── GUIDE_TEST.md                   # procédure de vérification en 5 niveaux
+├── tests/                          # 60 tests pytest (~2 s, sans base ni API)
 └── src/
     ├── config.py                   # chemins, constantes du contrat v1.1, protocole d'éval
     ├── data/
@@ -116,7 +126,54 @@ binome-b/
 ```
 
 Les livrables générés vont dans `reports/` à la racine du dépôt (livrables
-communs) : rapports Markdown, `figures/`, `metrics/`.
+communs) : rapports Markdown, `figures/`, `metrics/`, et `docx/` pour les exports
+Word — ce dernier n'étant **pas versionné**, voir ci-dessous.
+
+### Pourquoi le Markdown est la source et le `.docx` un export
+
+Le contrat d'interface du Binôme A est un `.docx`, format attendu pour les
+documents remis à l'encadrement. Nos rapports sont pourtant écrits en Markdown,
+et c'est délibéré : ils sont **générés** depuis `reports/metrics/`, donc tout
+chiffre qui s'y trouve provient d'un fichier de résultats et non d'une saisie
+manuelle. Un `.docx` binaire ne se régénérerait pas et ne se relirait pas dans un
+diff Git.
+
+```bash
+python -m src.scripts.export_livrables          # tous les livrables
+python -m src.scripts.export_livrables --fichier ../reports/retours_au_binome_a.md
+```
+
+`reports/docx/` est dans le `.gitignore` : ces fichiers sont des artefacts, à
+produire au moment de la remise. Deux raisons. GitHub rend déjà les `.md` avec
+leurs tableaux et leurs figures, donc le dépôt fournit des livrables lisibles sans
+eux. Et surtout, un `.docx` versionné peut se retrouver en retard sur son `.md`
+sans que rien ne le signale — ne pas le versionner supprime ce risque, puisqu'on
+le régénère juste avant de le transmettre.
+
+Le script reconvertit d'ailleurs **les cinq documents à chaque exécution**, sans
+détection de changement : c'est plus sûr qu'une comparaison de dates qui pourrait
+sauter un fichier.
+
+La conversion (pandoc) préserve les tableaux, les blocs de code et **embarque les
+figures** dans le fichier, qui reste donc transportable. Toute correction se fait
+dans le Markdown puis se réexporte : il n'existe jamais deux versions divergentes
+du même document.
+
+Le style suit celui du contrat d'interface du Binôme A — titres en bleu `2E74B5`,
+`Courier New` pour le code, pied de page paginé, langue fr-FR. Le gabarit est
+**construit par un script** plutôt que déposé comme binaire, afin que chaque choix
+de mise en forme soit justifié et vérifiable :
+
+```bash
+python -m src.scripts.build_docx_template      # -> assets/gabarit_netqos.docx
+```
+
+Le contrat du Binôme A ne peut pas servir directement de `--reference-doc` : son
+corps n'utilise qu'un seul style nommé, sa mise en forme étant appliquée
+directement run par run, et ses `docDefaults` sont vides. L'employer tel quel
+priverait les exports du style des blocs de code, des tableaux et des légendes. Le
+script part donc du gabarit de pandoc, qui définit les 49 styles nécessaires, et y
+applique les conventions visuelles relevées dans le document de référence.
 
 ---
 
@@ -140,6 +197,13 @@ Deux résultats à connaître avant de relire le code :
   Avec `reg:squarederror` (défaut), XGBoost était *battu* par la persistance à
   cause des queues lourdes de `packet_loss`. Avec `reg:absoluteerror`, aligné sur
   la métrique MAE, il gagne partout.
+- **L'optimisation des hyperparamètres n'a presque rien donné, et c'est un
+  résultat en soi.** À 300 arbres, la PR-AUC de l'Isolation Forest variait de
+  ±0,03 selon la seule graine aléatoire : plus que tout écart entre
+  configurations. Le seul gain fiable a été de réduire cette variance
+  (2 000 arbres). Un oracle supervisé atteint 0,905 de PR-AUC, ce qui chiffre le
+  coût de la contrainte non supervisée. Détail au §2.7 du rapport d'évaluation,
+  reproductible par `python -m src.scripts.tune_anomaly`.
 
 ---
 
@@ -155,6 +219,11 @@ Deux résultats à connaître avant de relire le code :
   colonne interdite atteint une matrice de features.
 - Métrique de référence en détection : **PR-AUC**. Avec ~1,5 % d'anomalies, la
   ROC-AUC dépasse 0,94 même pour un détecteur inutilisable.
+- Les invariants du protocole sont **verrouillés par des tests** (`tests/`) :
+  refus des colonnes interdites, refus d'étiquettes désalignées, purge effective
+  entre segments, cibles alignées par durée et non par position, et score des
+  détecteurs croissant avec l'atypicité. Ces tests existent parce que deux de ces
+  points ont réellement échoué en cours de projet, sans lever d'erreur.
 
 ---
 
@@ -184,12 +253,13 @@ chiffres dans [`reports/rapport_eda.md`](../reports/rapport_eda.md) §6.1 et §8
    `LabelAlignmentError` qui refuse un taux d'appariement anormalement bas.
 3. **`data_dictionary.md` §5 périmé** — liste `/kpi/raw`, `/kpi/clean`,
    `/stream/latest`, qui n'existent pas dans l'API v1.1 servie.
-4. **Pipeline non idempotent — vérifié sur la stack Docker** : la seconde
-   exécution de `run_pipeline` échoue sur
-   `UniqueViolation: duplicate key ... "4_clean_kpi_measurements_pkey"`. Les
-   données restent intactes (transaction annulée) mais le DAG Airflow, planifié
-   toutes les 15 min, échouera à chaque tick après le premier. Le paramètre
-   `since` existe dans les deux fonctions mais n'est jamais transmis.
+4. **Pipeline non incrémental** — ~~non idempotent~~ **corrigé par le Binôme A** :
+   les écritures passent désormais par `db.upsert_on_conflict`
+   (`ON CONFLICT DO UPDATE`), et deux exécutions consécutives de `run_pipeline`
+   réussissent avec des comptages stables (vérifié sur la stack). Reste que
+   `since` n'est toujours transmis ni par `run_pipeline.py` ni par le DAG : chaque
+   exécution relit et réécrit tout l'amont, soit ~3 min pour 100 000 lignes toutes
+   les 15 min. Correct, mais coûteux à plus grand volume.
 5. **`docker-compose.yml` était absent** — livrable commun §6.1, référencé par
    les trois README. Reconstitué par le Binôme B à la racine, et validé de bout en
    bout (base peuplée, API servie, dashboard lisant l'API) ; les services

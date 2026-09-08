@@ -63,6 +63,9 @@ python -m src.scripts.train_anomaly     # -> reports/metrics/anomalie_*
 python -m src.scripts.train_forecast    # -> reports/metrics/prevision_* (~15 min avec ARIMA)
 python -m src.scripts.make_report       # -> reports/rapport_evaluation_modeles.md
 python -m src.scripts.make_samples      # -> binome-b/data/samples/*.csv
+python -m src.scripts.export_livrables       # -> reports/docx/*.docx (non versionné ; nécessite pandoc)
+python -m src.scripts.make_architecture  # -> reports/architecture_schema.png (livrable §4.4)
+python -m src.scripts.build_docx_template  # reconstruit binome-b/assets/gabarit_netqos.docx
 streamlit run src/dashboard/app.py      # -> http://localhost:8501
 
 # Les scripts du binôme B fonctionnent contre l'API ou hors ligne :
@@ -70,7 +73,15 @@ NETQOS_DATA_SOURCE=local python -m src.scripts.train_anomaly
 NETQOS_DATA_SOURCE=api API_BASE_URL=http://localhost:8010/api/v1 python -m src.scripts.run_eda
 ```
 
-**Aucun test unitaire n'existe dans le dépôt** (pas de pytest, pas de fichier `test_*`), et il n'y a ni linter ni formateur configuré. Si des tests sont demandés, il faut d'abord poser l'infrastructure (choisir pytest, l'ajouter aux `requirements.txt`). Le dashboard se teste en revanche sans navigateur via `streamlit.testing.v1.AppTest` :
+**Tests : une suite pytest existe côté binôme B uniquement** (`binome-b/tests/`, 60 tests, ~2 s). Elle couvre les invariants qu'une régression casserait en silence : garde-fous anti-fuite (`LeakageError`, `LabelAlignmentError`), purge du découpage temporel, alignement des cibles de prévision par durée et non par position, métriques par épisode, règle du pire KPI, et convention de score des détecteurs (score croissant avec l'atypicité). **Le binôme A n'a aucun test.** Il n'y a ni linter ni formateur configuré.
+
+```bash
+cd binome-b && python -m pytest          # 60 tests, sans base ni API
+```
+
+Les tests n'utilisent que des DataFrames construits à la main : ils ne dépendent ni des CSV, ni de TimescaleDB, ni de l'API. `pytest.ini` transforme les `FutureWarning` en erreurs, pour que les dépréciations pandas soient traitées au lieu d'être accumulées.
+
+Le dashboard se teste sans navigateur via `streamlit.testing.v1.AppTest` :
 
 ```bash
 python -c "from streamlit.testing.v1 import AppTest; at=AppTest.from_file('src/dashboard/app.py', default_timeout=300); at.run(); print(len(at.exception), [e.value for e in at.error])"
@@ -79,7 +90,7 @@ python -c "from streamlit.testing.v1 import AppTest; at=AppTest.from_file('src/d
 ## Pièges connus
 
 - **`GET /api/v1/eval/labels` a deux défauts qui invalident silencieusement toute évaluation.** (1) Il sert les `ts` de `raw_kpi_measurements`, non rééchantillonnés (`20:21:41`), alors que `/kpi/history` et `/features` servent la minute pleine (`20:21:00`) : une jointure sur `(ts, cell_id)` n'apparie aucune ligne, la prévalence devient 0 % et toutes les métriques de détection tombent à zéro sans erreur. (2) Il accepte `limit`/`offset` mais omet `has_more`/`total`/`limit`/`offset` de son enveloppe : un client paginant sur `has_more` ne lit qu'une page. Les deux sont contournés côté binôme B dans `loader.load_labels()` et `api_client._get_paginated()` ; ne pas retirer ces contournements sans avoir vérifié que l'API a été corrigée. `splits.align_labels()` lève `LabelAlignmentError` si le taux d'appariement passe sous 50 %.
-- **Le pipeline n'est pas idempotent** (vérifié sur la stack Docker). `clean_prepare.py` et `build_features.py` relisent la table amont *en entier* et font un `to_sql(if_exists="append")` : la seconde exécution échoue sur `psycopg2.errors.UniqueViolation` (clé primaire `(ts, cell_id)`). Les données ne sont pas corrompues, mais le DAG Airflow échoue à chaque tick après le premier. Le paramètre `since` existe dans les deux fonctions mais n'est jamais passé, ni par `run_pipeline.py` ni par le DAG.
+- **Le pipeline relit tout l'amont à chaque exécution.** `clean_prepare.py` et `build_features.py` relisent la table amont *en entier* ; le paramètre `since` existe dans les deux fonctions mais n'est jamais passé, ni par `run_pipeline.py` ni par le DAG. Compter ~3 min pour 100 000 lignes, à chaque tick de 15 min. En revanche l'**idempotence est acquise** : les écritures passent par `db.upsert_on_conflict` (`ON CONFLICT DO UPDATE` sur `(ts, cell_id)`), et deux exécutions consécutives réussissent — ne pas remplacer ce `method=` par `method="multi"`, cela ferait réapparaître l'échec sur `UniqueViolation`.
 - **Ports hôtes fréquemment occupés** : 5432 et 8000 le sont sur la machine de développement. Démarrer avec `POSTGRES_HOST_PORT=5433 API_PORT=8010 DASHBOARD_PORT=8511 docker compose up -d`. Ne pas confondre `POSTGRES_HOST_PORT` (port publié) et `POSTGRES_PORT` (port interne au réseau Docker, toujours 5432).
 - **`src/db.py` et `.env.example` divergent** : les valeurs par défaut du code sont `netqos`/`netqos`/`localhost`/`netqos`, alors que `.env.example` fournit `netqos_db` et `POSTGRES_HOST=timescaledb` (valable dans Docker uniquement). Pour lancer les scripts hors conteneur, `POSTGRES_HOST=localhost` est requis.
 - Le `§5` de [binome-a/data_dictionary.md](binome-a/data_dictionary.md) liste des endpoints périmés (`/kpi/raw`, `/kpi/clean`, `/stream/latest`) ; la référence réelle est le tableau du [README du binôme A](binome-a/README.md) et le code de [binome-a/src/api/main.py](binome-a/src/api/main.py).
@@ -95,6 +106,14 @@ python -c "from streamlit.testing.v1 import AppTest; at=AppTest.from_file('src/d
 - Une valeur manquante en base est `NULL`, jamais `0` ni `-1` ; les valeurs imputées sont marquées par `is_missing`.
 - Les splits entraînement/validation doivent rester **chronologiques** : ne pas introduire de mélange de timestamps côté A qui provoquerait une fuite de données.
 
+## Rapport de projet
+
+Le §6.1 de la fiche de stage fait du **rapport de projet un livrable commun**, pas un rapport par binôme : `reports/rapport_projet_netqos_ai.md` est le document unique, signé des deux binômes, structuré comme la fiche l'exige (contexte, architecture, choix techniques, résultats, limites et perspectives). Ne pas recréer de rapport séparé par binôme — le rapport d'évaluation des modèles (§6.3) est le seul livrable rédigé propre au binôme B.
+
+Il s'agit d'un **projet de stage académique** (ESMT / DETIC), non d'un stage en entreprise : aucune structure d'accueil ni maître de stage à mentionner. Encadrant : Prof. Boudal NIANG.
+
+Le binôme A a produit sa propre version du rapport commun (`Rapport_Stage_NetQoS-AI_AB.docx`, hors dépôt). Sa section sur le binôme B est écrite de l'extérieur et contient des erreurs de fond — un modèle par cellule au lieu d'une normalisation par cellule, score d'anomalie confondu avec l'état QoS, ARIMA/Prophet donné comme modèle retenu au lieu de XGBoost, autoencodeur et DBSCAN absents. Ne pas s'en servir comme source sur le travail du binôme B.
+
 ## Convention Git
 
 Branches nommées `binome-a/<fonctionnalité>` ou `binome-b/<fonctionnalité>`, mergées sur `main` après validation uniquement.
@@ -103,9 +122,11 @@ Branches nommées `binome-a/<fonctionnalité>` ou `binome-b/<fonctionnalité>`, 
 
 | Jalon | Livrable | État |
 |-------|----------|------|
-| J7  | Contrat d'interface figé + EDA | fait (contrat v1.1) |
-| J14 | Baselines anomalie et prévision | pipeline A fonctionnel ; modèles B non implémentés |
-| J21 | Modèles avancés + dashboard | Airflow fait ; dashboard à l'état de squelette |
-| J30 | Soutenance finale | — |
+| J7  | Contrat d'interface figé + EDA | fait (contrat v1.1 ; `reports/rapport_eda.md`) |
+| J14 | Baselines anomalie et prévision | fait (4 détecteurs, 4 prévisionnistes, protocole d'évaluation) |
+| J21 | Modèles avancés + dashboard | fait (autoencodeur, XGBoost, dashboard 6 onglets, Airflow, intégration A ↔ B vérifiée) |
+| J30 | Soutenance finale | **tous les livrables du §6 sont produits**, support de soutenance (`reports/support_soutenance.md`, exporté en .pptx) et déroulé de démo (`reports/deroule_demo.md`) inclus ; reste les captures d'écran et une répétition en conditions réelles |
 
-Côté binôme B, `src/models/anomaly.py` (Isolation Forest → autoencodeur) et `src/models/forecast.py` (moyenne mobile/ARIMA → Prophet/XGBoost/LSTM) ne contiennent qu'un docstring et `# À implémenter` ; `src/dashboard/app.py` n'est qu'un placeholder Streamlit.
+Côté binôme B, tout le code est implémenté : `src/models/anomaly.py` (seuils du contrat, Isolation Forest, DBSCAN, autoencodeur), `src/models/forecast.py` (persistance, moyenne mobile, naïf saisonnier, ARIMA, XGBoost multi-horizon), `src/models/qos_state.py`, et `src/dashboard/app.py` (6 onglets, dont un temps réel par `st.fragment`). Prophet et LSTM ont été **écartés par choix de périmètre**, documenté au §4 de `reports/rapport_evaluation_modeles.md` — ne pas les réintroduire sans acter ce changement.
+
+Modèles retenus, pour ne pas re-dériver ces chiffres : détection = Isolation Forest 2 000 arbres (F1 0,631 · PR-AUC 0,586 · 0,018 fausse alerte/h · 9/9 épisodes) ; prévision = XGBoost multi-horizon (MAE inférieure de 10,0 / 14,6 / 20,7 % à la persistance à 5 / 15 / 30 min) ; état QoS annoncé ≈ 82 % d'exactitude. La borne oracle supervisée (PR-AUC 0,905) chiffre le prix de la contrainte non supervisée — elle n'est ni déployée ni sauvegardée.

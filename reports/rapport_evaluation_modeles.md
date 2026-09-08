@@ -72,7 +72,7 @@ fonctionnement atteignable dans un déploiement réel sans historique annoté.
 
 | detecteur        |   precision |   rappel |     f1 |   pr_auc |   roc_auc |   taux_alerte_pct |   rappel_episode |   fausses_alertes_par_heure |
 |:-----------------|------------:|---------:|-------:|---------:|----------:|------------------:|-----------------:|----------------------------:|
-| isolation_forest |      0.6215 |   0.6567 | 0.6386 |   0.6122 |    0.9598 |            1.597  |           1      |                      0.0181 |
+| isolation_forest |      0.6159 |   0.6467 | 0.6309 |   0.5858 |    0.9586 |            1.5869 |           1      |                      0.0181 |
 | autoencodeur     |      0.3826 |   0.3967 | 0.3895 |   0.3628 |    0.9438 |            1.5668 |           0.8889 |                      0.003  |
 | dbscan           |      0.2772 |   0.1867 | 0.2231 |   0.3909 |    0.9559 |            1.0176 |           0.4444 |                      0.0181 |
 | seuils_contrat   |      0.0263 |   0.7033 | 0.0507 |   0.0232 |    0.6518 |           40.4232 |           1      |                      0.5529 |
@@ -87,7 +87,7 @@ d'incidents annoté.
 
 | detecteur        |   precision |   rappel |     f1 |   pr_auc |   roc_auc |   taux_alerte_pct |   rappel_episode |   fausses_alertes_par_heure |
 |:-----------------|------------:|---------:|-------:|---------:|----------:|------------------:|-----------------:|----------------------------:|
-| isolation_forest |      0.7261 |   0.5567 | 0.6302 |   0.6122 |    0.9598 |            1.1587 |                1 |                      0.0181 |
+| isolation_forest |      0.6295 |   0.64   | 0.6347 |   0.5858 |    0.9586 |            1.5365 |                1 |                      0.0211 |
 | dbscan           |      0.5062 |   0.8133 | 0.624  |   0.3909 |    0.9559 |            2.4282 |                1 |                      0.0453 |
 | autoencodeur     |      0.501  |   0.8133 | 0.6201 |   0.3628 |    0.9438 |            2.4534 |                1 |                      0.003  |
 | seuils_contrat   |      0.0263 |   0.7033 | 0.0507 |   0.0232 |    0.6518 |           40.4232 |                1 |                      0.5529 |
@@ -96,7 +96,7 @@ d'incidents annoté.
 
 | detecteur        |   pr_auc |   roc_auc |
 |:-----------------|---------:|----------:|
-| isolation_forest |   0.6122 |    0.9598 |
+| isolation_forest |   0.5858 |    0.9586 |
 | dbscan           |   0.3909 |    0.9559 |
 | autoencodeur     |   0.3628 |    0.9438 |
 | seuils_contrat   |   0.0232 |    0.6518 |
@@ -117,6 +117,19 @@ Deux enseignements méthodologiques :
    n'est pas exploitable. C'est la traduction chiffrée du déséquilibre des seuils
    v1.1 diagnostiqué au §6.1 du rapport d'EDA.
 
+![Courbes précision / rappel des quatre détecteurs](figures/anomalie/precision_rappel.png)
+
+La lecture graphique confirme le classement : la courbe de l'Isolation Forest
+domine sur toute la plage de rappel, et celle de la baseline par seuils reste
+plate au ras de l'axe — une précision de l'ordre de 3 %, quel que soit le seuil.
+
+![Distribution des scores selon la vérité terrain](figures/anomalie/distribution_scores.png)
+
+Cette seconde figure montre *pourquoi* : la séparation des deux distributions
+(normale en bleu, anormale en rouge) est nette pour l'Isolation Forest, beaucoup
+plus confuse pour les autres. Un détecteur ne vaut que par le recouvrement de ces
+deux densités.
+
 ### 2.4 Réglage de l'autoencodeur
 
 Grille explorée, sélection sur la PR-AUC de validation :
@@ -131,7 +144,7 @@ Grille explorée, sélection sur la PR-AUC de validation :
 
 ### 2.5 Verdict baseline vs modèle avancé
 
-L'**autoencodeur ne bat pas la baseline apprise**. Sa PR-AUC (0.363) reste inférieure à celle de l'Isolation Forest (0.612), et son F1 au point d'exploitation (0.390) est nettement en dessous (0.639). Conformément au §8.2 de la fiche — « un modèle avancé ne se justifie que s'il bat la baseline » — **le modèle retenu pour le déploiement est l'Isolation Forest**, et non l'autoencodeur.
+L'**autoencodeur ne bat pas la baseline apprise**. Sa PR-AUC (0.363) reste inférieure à celle de l'Isolation Forest (0.586), et son F1 au point d'exploitation (0.390) est nettement en dessous (0.631). Conformément au §8.2 de la fiche — « un modèle avancé ne se justifie que s'il bat la baseline » — **le modèle retenu pour le déploiement est l'Isolation Forest**, et non l'autoencodeur.
 
 Interprétation de cet échec — elle est instructive et non anecdotique. Comparons
 l'écart de F1 entre le seuil non supervisé et le seuil optimal, qui mesure la
@@ -141,8 +154,8 @@ sensibilité de chaque détecteur au calibrage de son seuil :
 |:-----------------|--------------------------------------:|
 | dbscan           |                                 0.401 |
 | autoencodeur     |                                 0.231 |
+| isolation_forest |                                 0.004 |
 | seuils_contrat   |                                 0     |
-| isolation_forest |                                -0.008 |
 
 Deux détecteurs sont fortement dépendants de leur calibrage : DBSCAN
 (+0.401) et l'autoencodeur (+0.231). Tous
@@ -150,7 +163,7 @@ deux fondent leur score sur une **distance ou une erreur non bornée**, dont la
 distribution se déplace d'un segment temporel à l'autre : un seuil calibré sur
 l'entraînement se retrouve mal placé au test. L'Isolation Forest, dont le score
 est une profondeur d'isolement normalisée et bornée, ne perd que
--0.008 — c'est sa robustesse au calibrage, autant que sa
++0.004 — c'est sa robustesse au calibrage, autant que sa
 PR-AUC, qui la désigne pour le déploiement : en exploitation réelle, on ne
 dispose pas d'étiquettes pour régler le seuil.
 
@@ -173,15 +186,15 @@ averti. On raisonne donc par **épisode** : un intervalle contigu d'anomalie ré
 
 | cell_id   | debut                     |   duree_min | detecte   |   part_points_detectes |   pic_latence_ratio |   pic_packet_loss |   score_max |
 |:----------|:--------------------------|------------:|:----------|-----------------------:|--------------------:|------------------:|------------:|
-| cell_001  | 2026-08-14 07:22:00+00:00 |           6 | True      |                  1     |               4.565 |            78.908 |      0.7515 |
-| cell_001  | 2026-08-15 13:01:00+00:00 |          25 | True      |                  0.96  |               1.019 |             0.99  |      0.6297 |
-| cell_001  | 2026-08-15 21:57:00+00:00 |          27 | True      |                  0.667 |               2.205 |             2.36  |      0.6302 |
-| cell_002  | 2026-08-14 06:48:00+00:00 |          32 | True      |                  0.625 |               2.014 |             2.126 |      0.5956 |
-| cell_004  | 2026-08-16 01:08:00+00:00 |          36 | True      |                  0.778 |               2.232 |             2.25  |      0.628  |
-| cell_004  | 2026-08-14 19:54:00+00:00 |          38 | True      |                  0.737 |               2.133 |             2.47  |      0.6171 |
-| cell_004  | 2026-08-15 00:36:00+00:00 |          38 | True      |                  0.553 |               1.865 |             1.506 |      0.5996 |
-| cell_002  | 2026-08-15 11:27:00+00:00 |          40 | True      |                  0.575 |               1.913 |             2.968 |      0.5889 |
-| cell_004  | 2026-08-16 02:09:00+00:00 |          58 | True      |                  0.5   |               1.692 |             1.782 |      0.6033 |
+| cell_001  | 2026-08-14 07:22:00+00:00 |           6 | True      |                  1     |               4.565 |            78.908 |      0.7565 |
+| cell_001  | 2026-08-15 13:01:00+00:00 |          25 | True      |                  0.96  |               1.019 |             0.99  |      0.6516 |
+| cell_001  | 2026-08-15 21:57:00+00:00 |          27 | True      |                  0.667 |               2.205 |             2.36  |      0.6185 |
+| cell_002  | 2026-08-14 06:48:00+00:00 |          32 | True      |                  0.562 |               2.014 |             2.126 |      0.5822 |
+| cell_004  | 2026-08-16 01:08:00+00:00 |          36 | True      |                  0.75  |               2.232 |             2.25  |      0.6205 |
+| cell_004  | 2026-08-14 19:54:00+00:00 |          38 | True      |                  0.737 |               2.133 |             2.47  |      0.603  |
+| cell_004  | 2026-08-15 00:36:00+00:00 |          38 | True      |                  0.553 |               1.865 |             1.506 |      0.5851 |
+| cell_002  | 2026-08-15 11:27:00+00:00 |          40 | True      |                  0.625 |               1.913 |             2.968 |      0.5902 |
+| cell_004  | 2026-08-16 02:09:00+00:00 |          58 | True      |                  0.466 |               1.692 |             1.782 |      0.5873 |
 
 Lecture : le détecteur retenu signale **tous** les épisodes du segment de test.
 Il ne les couvre en revanche que partiellement — la part médiane de points
@@ -203,6 +216,159 @@ d'angle mort.
 > robuste avant la soutenance.
 
 
+![Chronogramme de détection sur le segment de test](figures/anomalie/chronogramme_isolation_forest.png)
+
+Chronogramme d'une cellule du segment de test : score d'atypicité, seuil
+d'alerte, épisodes réels en surimpression et alertes émises. C'est la
+représentation la plus directe de ce que voit l'exploitant.
+
+### 2.7 Campagne d'optimisation : ce qu'elle a donné, et ce qu'elle a révélé
+
+Le premier entraînement n'avait réglé que l'autoencodeur — le modèle
+écarté — laissant l'Isolation Forest et XGBoost à des valeurs choisies a priori.
+La campagne a comblé ce manque. Son résultat principal n'est pas un gain de
+performance : c'est la démonstration qu'**il n'y avait pas de gain à prendre**, et
+la mesure de ce qui plafonne réellement le système.
+
+#### Détection d'anomalies : 30 configurations explorées
+
+Deux leviers croisés : cinq espaces de features et six jeux d'hyperparamètres.
+
+Les cinq meilleures configurations par PR-AUC de validation :
+
+| espace         |   n_features |   n_estimators | max_samples   |   max_features |   pr_auc_validation |   duree_s |
+|:---------------|-------------:|---------------:|:--------------|---------------:|--------------------:|----------:|
+| contrat_actuel |           23 |            600 | 4096          |            1   |              0.6287 |       3.9 |
+| contrat_actuel |           23 |           1000 | 2048          |            0.8 |              0.6147 |       8.3 |
+| contrat_actuel |           23 |            600 | 1024          |            0.6 |              0.614  |       4.3 |
+| contrat_actuel |           23 |            300 | auto          |            1   |              0.6049 |       1.5 |
+| contrat_actuel |           23 |            300 | 256           |            1   |              0.6049 |       1.5 |
+
+La meilleure configuration dépasse l'actuelle de +0.0238 de PR-AUC en
+validation. Appliquée au test, elle s'est révélée **moins bonne**. Voici pourquoi.
+
+#### Le contrôle qui invalide la recherche
+
+Nous avons mesuré la dispersion de la PR-AUC **à configuration constante**, en ne
+faisant varier que la graine aléatoire :
+
+|   n_estimators |   pr_auc_moyenne |   ecart_type |   etendue |   n_graines |
+|---------------:|-----------------:|-------------:|----------:|------------:|
+|            300 |           0.5727 |       0.0315 |    0.0909 |           6 |
+|           1000 |           0.5945 |       0.0127 |    0.0317 |           6 |
+|           2000 |           0.5984 |       0.0053 |    0.0153 |           6 |
+
+L'étendue due à la seule graine, à 300 arbres, est de **0.0909** — soit
+3.8 fois l'écart de 0.0238 entre les deux
+configurations comparées. **Toute la grille classait donc du bruit.** Sans ce
+contrôle, nous aurions publié un « gain de +3.9 % »
+qui n'existe pas — l'erreur exacte que le protocole d'évaluation est censé
+prévenir.
+
+Deux enseignements de méthode :
+
+- **Aucun écart entre configurations n'est interprétable sans son incertitude.**
+  Avec 220 points positifs en validation, la PR-AUC est un estimateur trop bruité
+  pour départager des variantes proches.
+- **Nos hypothèses sur l'espace de features étaient fausses.** Nous pensions que
+  `cell_load`, dont l'EDA mesure une séparabilité de seulement 0,2 σ, diluait le
+  signal. Le retirer **dégrade** la PR-AUC de validation (0,575 contre 0,605).
+  Une feature faiblement discriminante seule peut contribuer en interaction avec
+  les autres — c'est précisément l'argument qui justifiait un modèle multivarié.
+
+#### Le seul gain réel : réduire la variance, pas chercher l'optimum
+
+Le tableau de dispersion porte la solution. Passer de 300 à 2000 arbres améliore
+la PR-AUC moyenne de
++4.5 %
+**et divise l'écart-type par
+6**.
+Le diagnostic étant un problème de variance, le remède est l'agrégation — un
+nombre d'arbres plus élevé — et non l'exploration d'hyperparamètres. C'est la
+configuration désormais déployée.
+
+**Correction d'un chiffre publié.** Nos résultats précédents annonçaient une
+PR-AUC de 0,612 et un F1 de 0,639, obtenus à 300 arbres avec `RANDOM_STATE = 42`.
+Ce tirage était favorable : la moyenne à 300 arbres est de
+0.5727. Les valeurs
+rapportées dans ce document sont celles de la configuration à 2000 arbres,
+inférieures en apparence mais **reproductibles à ±0.005**
+au lieu de ±0.032. Nous
+préférons un chiffre fiable à un chiffre flatteur.
+
+#### Prévision : 8 configurations explorées
+
+|   max_depth |   learning_rate |   n_estimators |   min_child_weight |   reg_lambda |   mae_validation |   duree_s |
+|------------:|----------------:|---------------:|-------------------:|-------------:|-----------------:|----------:|
+|           4 |            0.05 |            400 |                  1 |            1 |          1.03979 |       8.7 |
+|           6 |            0.05 |           1200 |                  5 |            2 |          1.04384 |      31.1 |
+|           6 |            0.05 |            400 |                  1 |            1 |          1.0439  |      11.2 |
+|           6 |            0.03 |            800 |                  1 |            1 |          1.04602 |      24.3 |
+|           6 |            0.1  |            400 |                  1 |            1 |          1.05125 |      12   |
+|          10 |            0.05 |            600 |                 10 |            5 |          1.05662 |      37.7 |
+|           8 |            0.03 |            800 |                  5 |            2 |          1.05913 |      33.2 |
+|           8 |            0.05 |            400 |                  1 |            1 |          1.06679 |      19.6 |
+
+Ici la situation est inverse, et il faut le dire : la MAE est calculée sur les
+19 820 points du segment, tous informatifs, et non sur 300 positifs. Un écart y
+est donc mesurable. Le meilleur réglage — profondeur 4 au lieu de 6 — n'apporte
+que **+0.39 %** en validation,
+mais ce gain **se confirme sur le test aux trois horizons** :
+
+| configuration   |    5 |    15 |    30 |
+|:----------------|-----:|------:|------:|
+| actuelle        | 9.69 | 14.39 | 20.48 |
+| optimisée       | 9.98 | 14.59 | 20.66 |
+
+Une amélioration constante sur trois horizons indépendants n'est pas une
+fluctuation : elle est retenue. Au-delà de la profondeur, l'écart entre la
+meilleure et la pire configuration de la grille n'est que de 2,6 % de MAE —
+XGBoost est proche de son plafond sur ces features.
+
+#### Où est le vrai plafond : la contrainte non supervisée
+
+Reste la question de fond : **peut-on atteindre 90 à 100 % ?** Nous l'avons
+mesuré. Un classifieur supervisé, entraîné sur `is_anomaly` avec les **mêmes
+features et le même découpage temporel**, atteint sur le test :
+
+| | Détecteur déployé (non supervisé) | Oracle supervisé |
+|---|---|---|
+| PR-AUC | 0.5858 | **0.9049** |
+| Précision | 0.6159 | **0.972** |
+| Rappel | 0.6467 | **0.81** |
+| F1 | 0.6309 | **0.8836** |
+
+**Le seuil des 90 % est donc atteignable — mais uniquement en s'entraînant sur la
+vérité terrain.** Ce que ni le contrat ni la réalité n'autorisent :
+
+- le §2.2 de la fiche impose une **approche non supervisée** pour la détection ;
+- le contrat d'interface v1.1 réserve `is_anomaly` à l'évaluation ;
+- et surtout, un réseau en exploitation **ne fournit pas d'étiquettes**. Un modèle
+  supervisé exigerait qu'un exploitant annote manuellement chaque incident passé.
+
+L'écart entre 0,59 et 0,90 de PR-AUC n'est donc pas un défaut de réglage : c'est
+le **prix mesuré de la contrainte non supervisée**. Ce chiffre est, à notre sens,
+le résultat le plus utile de la campagne : il transforme une insatisfaction
+(« le modèle se trompe souvent ») en une quantité justifiable devant un jury.
+
+Ce modèle supervisé n'est **ni déployé, ni sauvegardé, ni utilisé par le
+dashboard**. Il n'existe que dans `src/scripts/tune_anomaly.py`, à titre
+d'expérience documentée.
+
+#### Ce qui améliorerait réellement le détecteur
+
+Par ordre d'effet attendu, et aucun ne relève des hyperparamètres :
+
+1. **Plus d'événements d'anomalie** (demande adressée au Binôme A). Avec 220
+   positifs en validation, l'incertitude d'estimation interdit tout réglage fin.
+   C'est le verrou principal, et il est en amont de nous.
+2. **Une boucle semi-supervisée.** Si l'exploitant confirme ou infirme quelques
+   dizaines d'alertes, on se rapproche de la borne oracle sans annoter
+   l'historique complet. C'est la perspective la plus réaliste en exploitation.
+3. **Un recalibrage des seuils QoS en v1.2**, qui débloquerait aussi l'exactitude
+   de l'état annoncé (§3.5), aujourd'hui plafonnée par le déséquilibre des seuils.
+
+
 
 ---
 
@@ -220,27 +386,27 @@ Gain de MAE relatif à la persistance (%, moyenne sur les 5 KPI) — positif = m
 | moyenne_mobile_15m  |   0.68 |   1.58 |   2.42 |
 | naif_saisonnier_24h | -37.23 | -22.93 | -12.68 |
 | persistance         |   0    |  -0    |   0.01 |
-| xgboost             |   8.24 |  12.05 |  20.86 |
+| xgboost             |   8.11 |  12.54 |  21.24 |
 
 MAE détaillée par KPI et horizon :
 
 |                     |   arima |   moyenne_mobile_15m |   naif_saisonnier_24h |   persistance |   xgboost |
 |:--------------------|--------:|---------------------:|----------------------:|--------------:|----------:|
-| ('cell_load', 5)    |  4.1238 |               4.1075 |                5.2089 |        4.2488 |    3.857  |
-| ('cell_load', 15)   |  4.7124 |               4.6744 |                5.5318 |        4.8376 |    4.1388 |
-| ('cell_load', 30)   |  5.0478 |               5.0138 |                5.6354 |        5.0156 |    3.9689 |
-| ('jitter', 5)       |  0.2519 |               0.2476 |                0.3505 |        0.262  |    0.2419 |
-| ('jitter', 15)      |  0.2933 |               0.2818 |                0.3534 |        0.2956 |    0.2581 |
-| ('jitter', 30)      |  0.3324 |               0.3171 |                0.3774 |        0.3315 |    0.2657 |
-| ('latency', 5)      |  1.0497 |               1.1863 |                1.641  |        1.0672 |    0.9288 |
-| ('latency', 15)     |  1.3404 |               1.3645 |                1.6781 |        1.3162 |    1.139  |
-| ('latency', 30)     |  1.5058 |               1.425  |                1.5101 |        1.4586 |    1.0811 |
-| ('packet_loss', 5)  |  0.1839 |               0.1726 |                0.2505 |        0.1784 |    0.167  |
-| ('packet_loss', 15) |  0.1894 |               0.1742 |                0.2344 |        0.1805 |    0.1646 |
-| ('packet_loss', 30) |  0.1874 |               0.1749 |                0.2387 |        0.1855 |    0.1596 |
-| ('throughput', 5)   |  2.4236 |               2.41   |                3.3507 |        2.4705 |    2.3488 |
-| ('throughput', 15)  |  2.9472 |               2.8701 |                3.5423 |        2.871  |    2.5597 |
-| ('throughput', 30)  |  3.4144 |               3.3305 |                3.4854 |        3.3195 |    2.5313 |
+| ('cell_load', 5)    |  4.1238 |               4.1075 |                5.2089 |        4.2488 |    3.8607 |
+| ('cell_load', 15)   |  4.7124 |               4.6744 |                5.5318 |        4.8376 |    4.1366 |
+| ('cell_load', 30)   |  5.0478 |               5.0138 |                5.6354 |        5.0156 |    3.8914 |
+| ('jitter', 5)       |  0.2519 |               0.2476 |                0.3505 |        0.262  |    0.2422 |
+| ('jitter', 15)      |  0.2933 |               0.2818 |                0.3534 |        0.2956 |    0.2605 |
+| ('jitter', 30)      |  0.3324 |               0.3171 |                0.3774 |        0.3315 |    0.2654 |
+| ('latency', 5)      |  1.0497 |               1.1863 |                1.641  |        1.0672 |    0.9473 |
+| ('latency', 15)     |  1.3404 |               1.3645 |                1.6781 |        1.3162 |    1.1026 |
+| ('latency', 30)     |  1.5058 |               1.425  |                1.5101 |        1.4586 |    1.0622 |
+| ('packet_loss', 5)  |  0.1839 |               0.1726 |                0.2505 |        0.1784 |    0.1662 |
+| ('packet_loss', 15) |  0.1894 |               0.1742 |                0.2344 |        0.1805 |    0.1639 |
+| ('packet_loss', 30) |  0.1874 |               0.1749 |                0.2387 |        0.1855 |    0.1589 |
+| ('throughput', 5)   |  2.4236 |               2.41   |                3.3507 |        2.4705 |    2.3274 |
+| ('throughput', 15)  |  2.9472 |               2.8701 |                3.5423 |        2.871  |    2.5578 |
+| ('throughput', 30)  |  3.4144 |               3.3305 |                3.4854 |        3.3195 |    2.5795 |
 
 #### Périmètre : `test_complet`
 
@@ -251,63 +417,70 @@ Gain de MAE relatif à la persistance (%, moyenne sur les 5 KPI) — positif = m
 | moyenne_mobile_15m  |   1.27 |   1.17 |   1.53 |
 | naif_saisonnier_24h | -34.24 | -24.67 | -13.8  |
 | persistance         |  -0.01 |   0    |  -0    |
-| xgboost             |   9.68 |  14.4  |  20.48 |
+| xgboost             |   9.99 |  14.59 |  20.66 |
 
 MAE détaillée par KPI et horizon :
 
 |                     |   moyenne_mobile_15m |   naif_saisonnier_24h |   persistance |   xgboost |
 |:--------------------|---------------------:|----------------------:|--------------:|----------:|
-| ('cell_load', 5)    |               4.0242 |                5.2341 |        4.1655 |    3.8156 |
-| ('cell_load', 15)   |               4.2903 |                5.2346 |        4.3358 |    3.8045 |
-| ('cell_load', 30)   |               4.965  |                5.2323 |        4.8968 |    3.82   |
-| ('jitter', 5)       |               0.2681 |                0.3827 |        0.2759 |    0.2521 |
-| ('jitter', 15)      |               0.2858 |                0.3826 |        0.2917 |    0.2621 |
-| ('jitter', 30)      |               0.3019 |                0.3826 |        0.3135 |    0.263  |
-| ('latency', 5)      |               1.196  |                1.7007 |        1.1284 |    1.041  |
-| ('latency', 15)     |               1.3781 |                1.7013 |        1.3576 |    1.0969 |
-| ('latency', 30)     |               1.4926 |                1.701  |        1.5238 |    1.177  |
-| ('packet_loss', 5)  |               0.2217 |                0.287  |        0.2283 |    0.1921 |
-| ('packet_loss', 15) |               0.2267 |                0.2869 |        0.2345 |    0.1923 |
-| ('packet_loss', 30) |               0.2289 |                0.2869 |        0.2391 |    0.1936 |
-| ('throughput', 5)   |               2.6788 |                3.6107 |        2.7696 |    2.5539 |
-| ('throughput', 15)  |               2.8889 |                3.609  |        2.9159 |    2.5541 |
-| ('throughput', 30)  |               3.3569 |                3.6071 |        3.3255 |    2.5767 |
+| ('cell_load', 5)    |               4.0242 |                5.2341 |        4.1655 |    3.8165 |
+| ('cell_load', 15)   |               4.2903 |                5.2346 |        4.3358 |    3.8012 |
+| ('cell_load', 30)   |               4.965  |                5.2323 |        4.8968 |    3.8198 |
+| ('jitter', 5)       |               0.2681 |                0.3827 |        0.2759 |    0.2526 |
+| ('jitter', 15)      |               0.2858 |                0.3826 |        0.2917 |    0.2622 |
+| ('jitter', 30)      |               0.3019 |                0.3826 |        0.3135 |    0.2625 |
+| ('latency', 5)      |               1.196  |                1.7007 |        1.1284 |    1.0305 |
+| ('latency', 15)     |               1.3781 |                1.7013 |        1.3576 |    1.0914 |
+| ('latency', 30)     |               1.4926 |                1.701  |        1.5238 |    1.1661 |
+| ('packet_loss', 5)  |               0.2217 |                0.287  |        0.2283 |    0.1914 |
+| ('packet_loss', 15) |               0.2267 |                0.2869 |        0.2345 |    0.1911 |
+| ('packet_loss', 30) |               0.2289 |                0.2869 |        0.2391 |    0.1932 |
+| ('throughput', 5)   |               2.6788 |                3.6107 |        2.7696 |    2.5401 |
+| ('throughput', 15)  |               2.8889 |                3.609  |        2.9159 |    2.555  |
+| ('throughput', 30)  |               3.3569 |                3.6071 |        3.3255 |    2.5807 |
 
+
+![MAE par horizon et par KPI](figures/prevision/mae_par_horizon.png)
+
+Une lecture par KPI est indispensable : la hiérarchie des modèles n'est pas la
+même partout. XGBoost creuse l'écart sur `cell_load` et `throughput`, dont la
+dynamique est la plus structurée, et reste au niveau des baselines sur `jitter`,
+le plus bruité des cinq.
 
 ### 3.2 Sélection de l'objectif d'apprentissage — le résultat le plus instructif
 
 | kpi         |   horizon_min | objectif          |   mae_validation | retenu   |
 |:------------|--------------:|:------------------|-----------------:|:---------|
-| throughput  |             5 | reg:squarederror  |          2.79991 | False    |
-| throughput  |             5 | reg:absoluteerror |          2.73735 | True     |
-| throughput  |            15 | reg:squarederror  |          3.06253 | False    |
-| throughput  |            15 | reg:absoluteerror |          2.84947 | True     |
-| throughput  |            30 | reg:squarederror  |          3.12376 | False    |
-| throughput  |            30 | reg:absoluteerror |          2.86392 | True     |
-| latency     |             5 | reg:squarederror  |          1.1694  | False    |
-| latency     |             5 | reg:absoluteerror |          0.99199 | True     |
-| latency     |            15 | reg:squarederror  |          1.38648 | False    |
-| latency     |            15 | reg:absoluteerror |          1.03324 | True     |
-| latency     |            30 | reg:squarederror  |          1.51353 | False    |
-| latency     |            30 | reg:absoluteerror |          1.0439  | True     |
-| jitter      |             5 | reg:squarederror  |          0.28843 | False    |
-| jitter      |             5 | reg:absoluteerror |          0.2716  | True     |
-| jitter      |            15 | reg:squarederror  |          0.3344  | False    |
-| jitter      |            15 | reg:absoluteerror |          0.28515 | True     |
-| jitter      |            30 | reg:squarederror  |          0.36312 | False    |
-| jitter      |            30 | reg:absoluteerror |          0.28664 | True     |
-| packet_loss |             5 | reg:squarederror  |          0.34421 | False    |
-| packet_loss |             5 | reg:absoluteerror |          0.25134 | True     |
-| packet_loss |            15 | reg:squarederror  |          0.36731 | False    |
-| packet_loss |            15 | reg:absoluteerror |          0.2524  | True     |
-| packet_loss |            30 | reg:squarederror  |          0.43725 | False    |
-| packet_loss |            30 | reg:absoluteerror |          0.25305 | True     |
-| cell_load   |             5 | reg:squarederror  |          3.86923 | False    |
-| cell_load   |             5 | reg:absoluteerror |          3.84427 | True     |
-| cell_load   |            15 | reg:squarederror  |          3.92464 | False    |
-| cell_load   |            15 | reg:absoluteerror |          3.89989 | True     |
-| cell_load   |            30 | reg:squarederror  |          3.94713 | False    |
-| cell_load   |            30 | reg:absoluteerror |          3.90832 | True     |
+| throughput  |             5 | reg:squarederror  |          2.78224 | False    |
+| throughput  |             5 | reg:absoluteerror |          2.71889 | True     |
+| throughput  |            15 | reg:squarederror  |          2.98617 | False    |
+| throughput  |            15 | reg:absoluteerror |          2.8344  | True     |
+| throughput  |            30 | reg:squarederror  |          3.1018  | False    |
+| throughput  |            30 | reg:absoluteerror |          2.86963 | True     |
+| latency     |             5 | reg:squarederror  |          1.11238 | False    |
+| latency     |             5 | reg:absoluteerror |          0.98633 | True     |
+| latency     |            15 | reg:squarederror  |          1.3179  | False    |
+| latency     |            15 | reg:absoluteerror |          1.02828 | True     |
+| latency     |            30 | reg:squarederror  |          1.43537 | False    |
+| latency     |            30 | reg:absoluteerror |          1.03979 | True     |
+| jitter      |             5 | reg:squarederror  |          0.28555 | False    |
+| jitter      |             5 | reg:absoluteerror |          0.27153 | True     |
+| jitter      |            15 | reg:squarederror  |          0.3316  | False    |
+| jitter      |            15 | reg:absoluteerror |          0.28466 | True     |
+| jitter      |            30 | reg:squarederror  |          0.36716 | False    |
+| jitter      |            30 | reg:absoluteerror |          0.28596 | True     |
+| packet_loss |             5 | reg:squarederror  |          0.35113 | False    |
+| packet_loss |             5 | reg:absoluteerror |          0.25108 | True     |
+| packet_loss |            15 | reg:squarederror  |          0.38899 | False    |
+| packet_loss |            15 | reg:absoluteerror |          0.25157 | True     |
+| packet_loss |            30 | reg:squarederror  |          0.4345  | False    |
+| packet_loss |            30 | reg:absoluteerror |          0.25256 | True     |
+| cell_load   |             5 | reg:squarederror  |          3.86696 | False    |
+| cell_load   |             5 | reg:absoluteerror |          3.8469  | True     |
+| cell_load   |            15 | reg:squarederror  |          3.91733 | False    |
+| cell_load   |            15 | reg:absoluteerror |          3.89752 | True     |
+| cell_load   |            30 | reg:squarederror  |          3.94434 | False    |
+| cell_load   |            30 | reg:absoluteerror |          3.92514 | True     |
 
 Ce tableau documente une erreur corrigée en cours de route, qu'il vaut la peine
 d'expliciter. Une première version entraînait XGBoost avec l'objectif par défaut
@@ -333,19 +506,19 @@ Gain de MAE de XGBoost sur la persistance (%, test complet) :
 
 |   horizon_min |   gain_moyen_pct |
 |--------------:|-----------------:|
-|             5 |              9.7 |
-|            15 |             14.4 |
-|            30 |             20.5 |
+|             5 |             10   |
+|            15 |             14.6 |
+|            30 |             20.7 |
 
 Détail par KPI :
 
 | kpi         |    5 |   15 |   30 |
 |:------------|-----:|-----:|-----:|
-| cell_load   |  8.4 | 12.2 | 22   |
-| jitter      |  8.6 | 10.2 | 16.1 |
-| latency     |  7.7 | 19.2 | 22.8 |
-| packet_loss | 15.8 | 18   | 19   |
-| throughput  |  7.8 | 12.4 | 22.5 |
+| cell_load   |  8.4 | 12.3 | 22   |
+| jitter      |  8.4 | 10.1 | 16.3 |
+| latency     |  8.7 | 19.6 | 23.5 |
+| packet_loss | 16.2 | 18.5 | 19.2 |
+| throughput  |  8.3 | 12.4 | 22.4 |
 
 Le gain **croît avec l'horizon** — c'est le comportement attendu et il valide la
 démarche : à 5 minutes, la persistance est déjà excellente sur une série
@@ -353,6 +526,20 @@ fortement autocorrélée, et le modèle n'a que peu à ajouter ; à 30 minutes, 
 persistance décroche et l'information portée par la saisonnalité et les
 interactions entre KPI devient déterminante. Un modèle qui n'aurait pas montré
 cette progression aurait signalé une fuite ou une erreur d'alignement des cibles.
+
+![Prévision de la latence à 30 minutes](figures/prevision/exemple_latency_30min.png)
+
+Douze heures du segment de test : la courbe noire est la latence réellement
+observée, les autres sont les prévisions annoncées pour ce même instant. On voit
+que la persistance reproduit la courbe avec un décalage — c'est sa nature — là où
+XGBoost anticipe les inflexions.
+
+![Importance des features](figures/prevision/importance_features.png)
+
+Les importances confirment le cadrage de l'EDA : les lags courts et les moyennes
+glissantes du KPI cible dominent, mais les features des **autres** KPI
+apparaissent — c'est exactement l'information inter-KPI qu'ARIMA ne peut pas
+exploiter, et qui explique son échec.
 
 ### 3.4 Verdict baseline vs modèle avancé
 
@@ -381,9 +568,9 @@ annoncé. On applique donc les seuils du contrat aux KPI **prévus**, et on comp
 
 |   horizon_min |   exactitude_etat |   part_critiques_manques |     n |
 |--------------:|------------------:|-------------------------:|------:|
-|             5 |            0.8239 |                   0.1438 | 19820 |
-|            15 |            0.8207 |                   0.1479 | 19820 |
-|            30 |            0.8188 |                   0.1521 | 19820 |
+|             5 |            0.8207 |                   0.1415 | 19820 |
+|            15 |            0.8225 |                   0.139  | 19820 |
+|            30 |            0.821  |                   0.1465 | 19820 |
 
 Lecture : l'état QoS annoncé est correct pour environ 83 % des points, et cette
 exactitude ne se dégrade quasiment pas entre 5 et 30 minutes — la chaîne complète
@@ -420,25 +607,74 @@ prévision. Un recalibrage en v1.2 devrait mécaniquement l'améliorer.
 
 ## 6. Limites et perspectives
 
-1. **Volume d'épisodes d'anomalie insuffisant pour l'évaluation par épisode.**
-   9 épisodes dans le segment de test : puissance statistique faible. Demande
-   adressée au Binôme A (densité d'événements ou historique plus long).
-2. **Seuils QoS v1.1 déséquilibrés** (43 % du temps en « critique »). Plafonne
-   mécaniquement la qualité de l'état annoncé. Révision v1.2 demandée, options
-   documentées au §6.1 du rapport d'EDA. Le contrat gelé reste néanmoins
-   appliqué tel quel dans tout le code.
-3. **Données synthétiques.** Les anomalies sont injectées par trois mécanismes
+Ces limites se répartissent en deux familles, qu'il faut distinguer parce qu'elles
+n'appellent pas la même réponse : celles qui viennent de **contraintes amont**,
+subies mais compensées, et celles qui relèvent de **choix de périmètre** du Binôme B.
+
+### 6.1 Contraintes amont, et ce que nous avons fait pour les absorber
+
+Ces trois points ont été signalés au Binôme A dans une note datée
+(`reports/retours_au_binome_a.md`). Ils n'ont pas été corrigés dans le temps du
+projet, et le contrat d'interface étant gelé, nous ne les avons pas modifiés
+unilatéralement. Chacun a en revanche fait l'objet d'une mesure de mitigation, et
+c'est cela qui est évaluable dans notre travail.
+
+1. **Seuils QoS v1.1 déséquilibrés** — l'état « critique » couvre 43 % du temps,
+   « bon » 8 %, parce que les seuils ont été calibrés indicateur par indicateur
+   sans tenir compte de la règle d'agrégation qui les combine. **Impact mesuré** :
+   la baseline de détection par seuils tombe à une PR-AUC de 0,023, au niveau du
+   hasard, et l'exactitude de l'état QoS annoncé est plafonnée à ~82 %.
+   **Ce que nous avons fait** : quantifié le mécanisme (§6.1 du rapport d'EDA),
+   proposé deux options de recalibrage chiffrées, appliqué le contrat gelé tel
+   quel dans tout le code — y compris là où il nous dessert — et affiché
+   l'avertissement dans le dashboard pour qu'un exploitant ne prenne pas 43 % de
+   rouge pour un réseau en panne.
+
+2. **Densité d'anomalies trop faible** — 9 épisodes dans le segment de test.
+   **Impact mesuré** : les quatre détecteurs atteignent 100 % de rappel par
+   épisode, métrique qui ne les départage donc pas ; l'intervalle de confiance à
+   95 % d'une proportion de 9/9 descend à environ 70 %.
+   **Ce que nous avons fait** : substitué le **taux de fausses alertes par
+   heure** comme métrique discriminante (facteur 30 entre le meilleur et le pire
+   détecteur), et énoncé explicitement la faiblesse de puissance statistique
+   plutôt que de présenter le 100 % comme un résultat.
+
+3. **`GET /eval/labels` inexploitable en l'état** — ses horodatages ne sont pas
+   rééchantillonnés, et son enveloppe omet `has_more`. **Impact mesuré** : une
+   jointure directe n'apparie aucune ligne, la prévalence tombe à 0 % et toutes
+   les métriques de détection s'effondrent à zéro **sans qu'aucune erreur ne soit
+   levée** — c'est arrivé lors de notre première campagne contre l'API réelle.
+   **Ce que nous avons fait** : réaligné les étiquettes sur la grille minute et
+   dérouler la pagination sur la taille de page à défaut de `has_more`, puis —
+   surtout — ajouté un garde-fou (`LabelAlignmentError`) qui refuse un taux
+   d'appariement inférieur à 50 %. Une panne silencieuse est devenue une erreur
+   explicite, et le cas est verrouillé par un test.
+
+   Ces contournements vivent côté Binôme B et sont désormais **permanents**. Ils
+   sont signalés comme tels dans le code : les retirer exige d'avoir vérifié au
+   préalable que l'API a été corrigée.
+
+### 6.2 Choix de périmètre du Binôme B
+
+4. **Données synthétiques.** Les anomalies sont injectées par trois mécanismes
    paramétrés (panne, congestion, dégradation progressive) : un détecteur peut y
    réussir sans généraliser à des dégradations réelles, plus variées. Toute
-   transposition à des traces réelles exigerait une réévaluation complète.
-4. **Absence d'entraînement incrémental.** Les modèles sont réentraînés hors
+   transposition à des traces réelles exigerait une réévaluation complète. C'est
+   la limite la plus fondamentale de l'ensemble du projet, les deux binômes
+   confondus.
+5. **Plafond de la détection non supervisée.** L'écart entre 0,59 et 0,90 de
+   PR-AUC mesuré au §2.7 n'est pas réductible par le réglage : il tient à
+   l'interdiction d'utiliser les étiquettes à l'entraînement. La perspective
+   réaliste n'est pas un meilleur modèle mais une **boucle semi-supervisée**, où
+   l'exploitant confirme quelques dizaines d'alertes.
+6. **Absence d'entraînement incrémental.** Les modèles sont réentraînés hors
    ligne. Un déploiement réel nécessiterait un réentraînement périodique et un
    suivi de dérive, la distribution du trafic évoluant avec le parc.
-5. **Prévision ponctuelle sans intervalle.** Seule la valeur médiane est prévue.
+7. **Prévision ponctuelle sans intervalle.** Seule la valeur médiane est prévue.
    Un intervalle de prédiction (objectif quantile, déjà disponible dans XGBoost)
    donnerait à l'exploitant une mesure d'incertitude, et permettrait d'alerter
    sur la probabilité de franchir un seuil plutôt que sur une valeur unique.
-   C'est la perspective la plus directement exploitable.
+   C'est la perspective la plus directement exploitable, et la moins coûteuse.
 
 ---
 

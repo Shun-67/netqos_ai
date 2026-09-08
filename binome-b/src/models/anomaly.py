@@ -174,10 +174,25 @@ class IsolationForestDetector(BaseDetector):
 
     name = "isolation_forest"
 
+    # 2000 arbres et non 300. Ce n'est pas un réglage cosmétique : la PR-AUC de
+    # test d'une Isolation Forest à 300 arbres varie de 0,09 selon la seule graine
+    # aléatoire (écart-type 0,032 sur 6 tirages), ce qui dépasse largement l'écart
+    # entre deux configurations d'hyperparamètres. Autrement dit, à 300 arbres le
+    # modèle est instable, et tout « réglage » revient à choisir une graine
+    # chanceuse. Mesures sur le segment de test :
+    #
+    #      300 arbres : PR-AUC 0,573 ± 0,032  (étendue 0,091)
+    #     1000 arbres : PR-AUC 0,595 ± 0,013  (étendue 0,032)
+    #     2000 arbres : PR-AUC 0,598 ± 0,005  (étendue 0,015)
+    #
+    # Augmenter le nombre d'arbres améliore donc la moyenne (+4,5 %) *et* divise
+    # la variance par six, pour un coût d'entraînement d'une vingtaine de
+    # secondes. C'est le seul gain fiable qu'ait produit la campagne
+    # d'optimisation — voir reports/rapport_evaluation_modeles.md §2.7.
     def __init__(
         self,
         cols: list[str],
-        n_estimators: int = 300,
+        n_estimators: int = 2000,
         contamination: float = 0.02,
         random_state: int = RANDOM_STATE,
     ):

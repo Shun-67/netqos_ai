@@ -1,0 +1,45 @@
+{
+  "espace_retenu": "contrat_actuel",
+  "n_features_retenu": 23,
+  "hyperparametres_retenus": {
+    "n_estimators": 600,
+    "max_samples": 4096,
+    "max_features": 1.0
+  },
+  "pr_auc_validation_actuelle": 0.6049,
+  "pr_auc_validation_optimisee": 0.6287,
+  "gain_validation_pct": 3.93,
+  "ecart_entre_configurations": 0.0238,
+  "etendue_due_a_la_graine_300_arbres": 0.0909,
+  "gain_est_du_bruit": true,
+  "variance_par_nombre_d_arbres": [
+    {
+      "n_estimators": 300,
+      "pr_auc_moyenne": 0.5727,
+      "ecart_type": 0.0315,
+      "etendue": 0.0909,
+      "n_graines": 6
+    },
+    {
+      "n_estimators": 1000,
+      "pr_auc_moyenne": 0.5945,
+      "ecart_type": 0.0127,
+      "etendue": 0.0317,
+      "n_graines": 6
+    },
+    {
+      "n_estimators": 2000,
+      "pr_auc_moyenne": 0.5984,
+      "ecart_type": 0.0053,
+      "etendue": 0.0153,
+      "n_graines": 6
+    }
+  ],
+  "borne_oracle_supervisee": {
+    "pr_auc": 0.9049,
+    "precision": 0.972,
+    "rappel": 0.81,
+    "f1": 0.8836,
+    "avertissement": "Modèle supervisé entraîné sur is_anomaly. Non déployé, non sauvegardé, non utilisé par le dashboard. Interdit par le contrat v1.1 : sert uniquement de borne supérieure pour l'analyse."
+  }
+}

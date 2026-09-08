@@ -1,0 +1,4 @@
+n_estimators,pr_auc_moyenne,ecart_type,etendue,n_graines
+300,0.5727,0.0315,0.0909,6
+1000,0.5945,0.0127,0.0317,6
+2000,0.5984,0.0053,0.0153,6

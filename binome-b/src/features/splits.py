@@ -181,4 +181,6 @@ def align_labels(
             f"{labels['ts'].head(2).tolist()}"
         )
 
-    return merged["is_anomaly"].fillna(False).astype(bool)
+    # `astype("boolean")` avant fillna : sur une colonne d'objets issue d'une
+    # jointure incomplète, pandas déprécie le rétro-typage implicite du fillna.
+    return merged["is_anomaly"].astype("boolean").fillna(False).astype(bool)

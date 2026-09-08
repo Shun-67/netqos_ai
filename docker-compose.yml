@@ -4,8 +4,9 @@
 # Livrable commun (§6.1 de la fiche) : « dépôt conteneurisé, démarrable en
 # une commande ».
 #
-#   docker compose up -d --build           # base + API + dashboard
-#   docker compose --profile full up -d    # + Airflow (orchestration J21)
+#   docker compose up -d --build             # base + API + dashboard
+#   docker compose --profile stream up -d    # + flux simulé temps quasi réel
+#   docker compose --profile full up -d      # + Airflow (orchestration J21)
 #
 # ---------------------------------------------------------------------
 # RÉSOLUTION DE CONFLIT (merge main -> binome-b/ia-et-restitution)
@@ -101,6 +102,47 @@ services:
       timeout: 5s
       retries: 6
       start_period: 20s
+
+  # -------------------------------------------------------------------
+  # Flux simulé (Binôme A) — ingestion temps quasi réel
+  # -------------------------------------------------------------------
+  stream-simulator:
+    # L'exigence §3.2.1 de la fiche fait de l'ingestion en flux une capacité de
+    # la plateforme, et le §3.3 demande un démarrage « en une commande ». Le
+    # simulateur devait pourtant être lancé à la main
+    # (`docker exec -d netqos_api python -m src.ingestion.stream_simulator ...`) :
+    # `docker compose up` livrait donc une plateforme sans flux, et l'onglet
+    # « Temps réel » du dashboard restait vide en démonstration.
+    #
+    # Réutilise l'image de l'API : même code, mêmes dépendances, aucune image
+    # supplémentaire à construire.
+    image: netqos_ai-api
+    build:
+      context: ./binome-a
+      dockerfile: Dockerfile
+    container_name: netqos_stream_simulator
+    restart: unless-stopped
+    command: >-
+      python -m src.ingestion.stream_simulator
+      --cells ${GENERATOR_CELLS:-5}
+      --interval-seconds ${GENERATOR_INTERVAL_SECONDS:-5}
+    environment:
+      POSTGRES_HOST: timescaledb
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER:-netqos}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-netqos}
+      POSTGRES_DB: ${POSTGRES_DB:-netqos}
+      PYTHONUNBUFFERED: "1"
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+    volumes:
+      - ./binome-a:/app
+    profiles:
+      - stream   # `docker compose --profile stream up -d` pour émettre le flux.
+                 # Hors profil par défaut : le simulateur écrit en continu dans
+                 # raw_kpi_measurements, ce qui n'est pas souhaitable pendant un
+                 # entraînement ou une évaluation reproductible.
 
   # -------------------------------------------------------------------
   # Dashboard (Binôme B) — consommateur de l'API
