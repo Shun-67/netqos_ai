@@ -140,7 +140,7 @@ diff Git.
 
 ```bash
 python -m src.scripts.export_livrables          # tous les livrables
-python -m src.scripts.export_livrables --fichier ../reports/retours_au_binome_a.md
+python -m src.scripts.export_livrables --fichier ../reports/rapport_projet_netqos_ai.md
 ```
 
 `reports/docx/` est dans le `.gitignore` : ces fichiers sont des artefacts, à

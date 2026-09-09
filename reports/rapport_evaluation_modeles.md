@@ -613,9 +613,9 @@ subies mais compensées, et celles qui relèvent de **choix de périmètre** du 
 
 ### 6.1 Contraintes amont, et ce que nous avons fait pour les absorber
 
-Ces trois points ont été signalés au Binôme A dans une note datée
-(`reports/retours_au_binome_a.md`). Ils n'ont pas été corrigés dans le temps du
-projet, et le contrat d'interface étant gelé, nous ne les avons pas modifiés
+Ces trois points ont été signalés au Binôme A par écrit, chacun avec son
+symptôme, son diagnostic chiffré et la correction attendue. Ils n'ont pas été
+corrigés dans le temps du projet, et le contrat d'interface étant gelé, nous ne les avons pas modifiés
 unilatéralement. Chacun a en revanche fait l'objet d'une mesure de mitigation, et
 c'est cela qui est évaluable dans notre travail.
 

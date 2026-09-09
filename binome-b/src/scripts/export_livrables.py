@@ -18,7 +18,7 @@ les figures (embarquées dans le fichier, donc transportables).
 
 Usage (depuis binome-b/) :
     python -m src.scripts.export_livrables
-    python -m src.scripts.export_livrables --fichier ../reports/retours_au_binome_a.md
+    python -m src.scripts.export_livrables --fichier ../reports/rapport_projet_netqos_ai.md
     python -m src.scripts.export_livrables --sans-toc
 """
 
@@ -45,10 +45,6 @@ DOCUMENTS = {
     "rapport_evaluation_modeles.md": {
         "title": "Rapport d'évaluation des modèles",
         "subtitle": "NetQoS-AI — Binôme B — Livrable §6.3",
-    },
-    "retours_au_binome_a.md": {
-        "title": "Retours du Binôme B au Binôme A",
-        "subtitle": "Points relevés pendant l'intégration A ↔ B",
     },
     # Livrable commun du §6.1, signé par les deux binômes : la clé `author`
     # remplace la valeur par défaut, qui ne désigne que le binôme B.

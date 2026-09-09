@@ -474,13 +474,13 @@ visibles tôt — notamment sur le `docker-compose.yml` (§5.2).
 
 **La documentation comme canal technique, et non comme formalité de fin.** Les
 deux binômes ne travaillant pas en présence continue, les réserves techniques
-ont été formalisées **par écrit dans le dépôt** plutôt que transmises oralement.
-Le document `reports/retours_au_binome_a.md` recense six points relevés pendant
-l'intégration, chacun avec son symptôme, son diagnostic chiffré, la correction
-attendue et le contournement appliqué en attendant. Cette formalisation a un
-coût de rédaction, mais elle rend chaque réserve reproductible par une commande,
-et elle documente le contournement — ce qui évite qu'il soit retiré par erreur
-une fois le défaut oublié.
+ont été formalisées **par écrit** plutôt que transmises oralement : six points
+relevés pendant l'intégration, chacun avec son symptôme, son diagnostic chiffré,
+la correction attendue et le contournement appliqué en attendant. Ils sont
+repris aux §5 et §7 du présent rapport. Cette formalisation a un coût de
+rédaction, mais elle rend chaque réserve reproductible par une commande, et elle
+documente le contournement — ce qui évite qu'il soit retiré par erreur une fois
+le défaut oublié.
 
 **Les livrables chiffrés sont générés, jamais rédigés à la main.** Le rapport
 d'analyse exploratoire, le rapport d'évaluation, les six figures, le schéma
@@ -1619,7 +1619,6 @@ netqos_ai/
     ├── architecture_schema.png
     ├── rapport_eda.md
     ├── rapport_evaluation_modeles.md
-    ├── retours_au_binome_a.md
     ├── rapport_projet_netqos_ai.md    # le présent document
     ├── figures/  metrics/
     └── docx/                     # exports Word (non versionnés)
@@ -1822,7 +1821,6 @@ Procédure de vérification détaillée, avec les valeurs attendues à chaque é
 | `binome-a/data_dictionary.md` | Dictionnaire des données et des caractéristiques |
 | `reports/rapport_eda.md` | Analyse exploratoire, diagnostic des seuils, décisions de cadrage |
 | `reports/rapport_evaluation_modeles.md` | Protocole, comparaison baseline / avancé, analyse d'erreurs, campagne d'optimisation |
-| `reports/retours_au_binome_a.md` | Six points relevés pendant l'intégration, avec diagnostic reproductible |
 | `binome-b/NOTICE_DASHBOARD.md` | Notice d'utilisation du tableau de bord |
 | `binome-b/GUIDE_TEST.md` | Vérification en cinq niveaux, avec valeurs attendues |
 | `reports/support_soutenance.md` | Support de soutenance — 31 diapositives, exporté en `.pptx` |
